@@ -18,6 +18,13 @@ struct RoomSettings {
     bool  temp_mode_enable;
 };
 
+struct MqttConfig {
+    char server[64];
+    uint16_t port;
+    char user[32];
+    char pass[32];
+};
+
 class Storage {
 public:
     void begin();
@@ -25,6 +32,14 @@ public:
     // ---- общие ----
     bool getWinterMode();      void setWinterMode(bool v);
     bool getPowerLast();       void setPowerLast(bool v); // для UI, не для автозапуска (п.4)
+
+    // ---- MQTT конфигурация ----
+    MqttConfig getMqttConfig();
+    void setMqttConfig(const MqttConfig &cfg);
+    void setMqttServer(const char* server);
+    void setMqttPort(uint16_t port);
+    void setMqttUser(const char* user);
+    void setMqttPass(const char* pass);
 
     // ---- CO2 / заслонки ----
     float getCo2Deadband();          void setCo2Deadband(float v);
