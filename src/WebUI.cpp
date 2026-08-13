@@ -42,7 +42,7 @@ async function refresh(){
    html+='<h3>Комнаты</h3><table>';
    d.rooms.forEach((x,i)=>{
     html+='<tr><td>Комната '+(i+1)+'</td><td>CO₂ '+fnum(x.co2,0)+' ('+fresh(x.co2_fresh)+
-      '), T '+fnum(x.temp,1)+' °C ('+fresh(x.temp_fresh)+'), заслонка '+fnum(x.pos,0)+'%</td></tr>';
+      '), T '+fnum(x.temp,1)+' °C ('+fresh(x.temp_fresh)+'), заслонка '+fnum(x.pos,0)+'%, ручн. '+(x.manual_mode?' да':' нет')+'</td></tr>';
    });
    html+='</table>';
   }
@@ -99,6 +99,7 @@ void WebUI::setupRoutes() {
             ro["temp_fresh"] = sensors.isRoomTempFresh(i);
             ro["data_fresh"] = sensors.isRoomDataFresh(i);
             ro["pos"] = dampers.getPos(i);
+            ro["manual_mode"] = dampers.isManual(i);
             ro["block_reason"] = (int)dampers.getBlockReason(i);
         }
 
