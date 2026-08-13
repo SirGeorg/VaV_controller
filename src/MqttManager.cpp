@@ -236,12 +236,12 @@ void MqttManager::publishState() {
         const bool co2Fresh = sensors.isRoomCo2Fresh(i);
         const bool tempFresh = sensors.isRoomTempFresh(i);
 
-        DynamicJsonDocument doc(256);
+        DynamicJsonDocument doc(384);
         doc["co2"] = rd.co2;
         doc["temp"] = rd.temp;
         doc["pos"] = dampers.getPos(i);
         doc["max_pos"] = dampers.getMaxPos(i);
-        doc["manual"] = dampers.isManual(i);
+        doc["manual_mode"] = dampers.isManual(i);
         doc["co2_fresh"] = co2Fresh;
         doc["temp_fresh"] = tempFresh;
         doc["data_fresh"] = co2Fresh && tempFresh;
