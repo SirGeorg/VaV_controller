@@ -10,19 +10,233 @@ WebUI webUi;
 
 static const char INDEX_HTML[] PROGMEM = R"HTML(
 <!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">
-<title>Vent Controller</title><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vent Controller v4.1</title><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 body{font-family:sans-serif;background:#111;color:#eee;margin:0;padding:16px}
 h1{font-size:18px}.card{background:#1c1c1c;border-radius:8px;padding:12px;margin-bottom:10px}
 table{width:100%;font-size:14px}td{padding:2px 4px}
+input,select{background:#333;color:#eee;border:1px solid #555;padding:4px;border-radius:4px}
+button{background:#0a84ff;color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer}
+button:hover{background:#0077ed}
+.chart-container{height:200px;position:relative;margin-top:10px}
+canvas{width:100%!important;height:100%!important}
+.tab-btn{background:#333;margin-right:4px}
+.tab-btn.active{background:#0a84ff}
+.tab-content{display:none}
+.tab-content.active{display:block}
 </style></head><body>
-<h1>Vent Controller — vent.local</h1>
-<div class="card" id="status">Загрузка...</div>
-<div class="card"><b>Версия:</b> <span id="fw"></span><br>
-<b>Аптайм:</b> <span id="uptime"></span> с</div>
+<h1>Vent Controller v4.1 — vent.local</h1>
+<div style="margin-bottom:10px">
+ <button class="tab-btn active" onclick="showTab('status')">Статус</button>
+ <button class="tab-btn" onclick="showTab('mqtt')">MQTT</button>
+ <button class="tab-btn" onclick="showTab('calib')">Калибровка</button>
+ <button class="tab-btn" onclick="showTab('config')">Конфигурация</button>
+</div>
+
+<div id="tab-status" class="tab-content active">
+ <div class="card" id="status">Загрузка...</div>
+ <div class="card"><b>Версия:</b> <span id="fw"></span><br><b>Аптайм:</b> <span id="uptime"></span> с</div>
+ <div class="card">
+  <h3>График перепада давления (10 мин)</h3>
+  <div class="chart-container"><canvas id="dpChart"></canvas></div>
+ </div>
+</div>
+
+<div id="tab-mqtt" class="tab-content">
+ <div class="card">
+  <h3>Настройки MQTT</h3>
+  <form id="mqttForm">
+   <table style="max-width:400px">
+    <tr><td>Сервер:</td><td><input type="text" id="mqtt_server" required></td></tr>
+    <tr><td>Порт:</td><td><input type="number" id="mqtt_port" value="1883" required></td></tr>
+    <tr><td>Пользователь:</td><td><input type="text" id="mqtt_user"></td></tr>
+    <tr><td>Пароль:</td><td><input type="password" id="mqtt_pass"></td></tr>
+    <tr><td>Client ID:</td><td><input type="text" id="mqtt_client_id" readonly></td></tr>
+    <tr><td>Root topic:</td><td><input type="text" id="mqtt_root" value="vent" readonly></td></tr>
+   </table>
+   <p><button type="submit">Сохранить и перезагрузить</button></p>
+  </form>
+ </div>
+</div>
+
+<div id="tab-calib" class="tab-content">
+ <div class="card">
+  <h3>Калибровка сервоприводов</h3>
+  <form id="servoForm">
+   <table>
+    <tr><td>Комната:</td><td><select id="cal_room"><option>1</option><option>2</option><option>3</option><option>4</option></select></td></tr>
+    <tr><td>Pmin (мкс):</td><td><input type="number" id="cal_pmin" value="1000"></td></tr>
+    <tr><td>Pmax (мкс):</td><td><input type="number" id="cal_pmax" value="2000"></td></tr>
+   </table>
+   <p><button type="submit">Калибровать</button></p>
+  </form>
+ </div>
+ <div class="card">
+  <h3>Калибровка датчиков 4-20мА</h3>
+  <form id="analogForm">
+   <table>
+    <tr><td>Датчик:</td><td><select id="analog_sensor"><option value="dp">Перепад давления</option><option value="flow">Расход воздуха</option></select></td></tr>
+    <tr><td>Offset:</td><td><input type="number" step="0.01" id="analog_offset" value="0"></td></tr>
+    <tr><td>Scale:</td><td><input type="number" step="0.01" id="analog_scale" value="1"></td></tr>
+   </table>
+   <p><button type="submit">Калибровать</button></p>
+  </form>
+ </div>
+</div>
+
+<div id="tab-config" class="tab-content">
+ <div class="card">
+  <h3>Резервное копирование</h3>
+  <p><button onclick="backup()">Скачать конфигурацию</button></p>
+  <p><label>Восстановить из JSON: <input type="file" id="restoreFile" accept=".json"></label></p>
+  <p><button onclick="restore()">Восстановить</button></p>
+ </div>
+ <div class="card">
+  <h3>Журнал событий</h3>
+  <p><button onclick="loadLog()">Загрузить журнал</button></p>
+  <pre id="logOutput" style="background:#222;padding:8px;overflow:auto;max-height:300px;font-size:12px"></pre>
+ </div>
+</div>
+
 <script>
+const DP_HISTORY_MAX=200;
+let dpHistory={labels:[],dp:[],dpSetpoint:[]};
+let chart=null;
+
+function showTab(name){
+ document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+ document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
+ document.getElementById('tab-'+name).classList.add('active');
+ event.target.classList.add('active');
+ if(name==='mqtt') loadMqttConfig();
+}
+
 function fnum(x,d){return(x===null||x===undefined)?'—':Number(x).toFixed(d);}
 function fresh(x){return x?'OK':'нет';}
+
+function initChart(){
+ const ctx=document.getElementById('dpChart').getContext('2d');
+ chart=new Chart(ctx,{
+  type:'line',
+  data:{labels:dpHistory.labels,datasets:[
+   {label:'dP (Pa)',data:dpHistory.dp,borderColor:'#0a84ff',tension:0.3,pointRadius:0},
+   {label:'Уставка (Pa)',data:dpHistory.dpSetpoint,borderColor:'#30d158',tension:0.3,pointRadius:0}
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,animation:false,
+   scales:{x:{display:false},y:{beginAtZero:false}},
+   plugins:{legend:{labels:{color:'#eee'}}}
+  }
+ });
+}
+
+async function updateChart(dp,dpSp){
+ const now=new Date();
+ const timeLabel=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')+':'+now.getSeconds().toString().padStart(2,'0');
+ dpHistory.labels.push(timeLabel);
+ dpHistory.dp.push(dp);
+ dpHistory.dpSetpoint.push(dpSp);
+ if(dpHistory.labels.length>DP_HISTORY_MAX){
+  dpHistory.labels.shift();
+  dpHistory.dp.shift();
+  dpHistory.dpSetpoint.shift();
+ }
+ if(chart){
+  chart.data.labels=dpHistory.labels;
+  chart.data.datasets[0].data=dpHistory.dp;
+  chart.data.datasets[1].data=dpHistory.dpSetpoint;
+  chart.update();
+ }
+}
+
+async function loadMqttConfig(){
+ try{
+  const r=await fetch('/api/mqtt/config');
+  if(r.ok){
+   const d=await r.json();
+   document.getElementById('mqtt_server').value=d.server||'';
+   document.getElementById('mqtt_port').value=d.port||1883;
+   document.getElementById('mqtt_user').value=d.user||'';
+   document.getElementById('mqtt_pass').value='';
+   document.getElementById('mqtt_client_id').value=d.client_id||'vent_esp32';
+   document.getElementById('mqtt_root').value=d.root||'vent';
+  }
+ }catch(e){console.error(e);}
+}
+
+document.getElementById('mqttForm').addEventListener('submit',async(e)=>{
+ e.preventDefault();
+ const data={
+  server:document.getElementById('mqtt_server').value,
+  port:parseInt(document.getElementById('mqtt_port').value),
+  user:document.getElementById('mqtt_user').value,
+  pass:document.getElementById('mqtt_pass').value
+ };
+ try{
+  const r=await fetch('/api/mqtt/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  if(r.ok){alert('Настройки сохранены. Устройство будет перезапущено.');}
+  else{alert('Ошибка: '+await r.text());}
+ }catch(e){alert('Ошибка: '+e.message);}
+});
+
+document.getElementById('servoForm').addEventListener('submit',async(e)=>{
+ e.preventDefault();
+ const room=document.getElementById('cal_room').value;
+ const pmin=document.getElementById('cal_pmin').value;
+ const pmax=document.getElementById('cal_pmax').value;
+ try{
+  const r=await fetch('/api/calibrate/servo?room='+room+'&pmin='+pmin+'&pmax='+pmax,{method:'POST'});
+  if(r.ok)alert('Калибровка выполнена');
+  else alert('Ошибка: '+await r.text());
+ }catch(e){alert('Ошибка: '+e.message);}
+});
+
+document.getElementById('analogForm').addEventListener('submit',async(e)=>{
+ e.preventDefault();
+ const sensor=document.getElementById('analog_sensor').value;
+ const offset=document.getElementById('analog_offset').value;
+ const scale=document.getElementById('analog_scale').value;
+ try{
+  const r=await fetch('/api/calibrate/analog?sensor='+sensor+'&offset='+offset+'&scale='+scale,{method:'POST'});
+  if(r.ok)alert('Калибровка выполнена');
+  else alert('Ошибка: '+await r.text());
+ }catch(e){alert('Ошибка: '+e.message);}
+});
+
+async function backup(){
+ try{
+  const r=await fetch('/api/backup');
+  if(r.ok){
+   const blob=await r.blob();
+   const a=document.createElement('a');
+   a.href=URL.createObjectURL(blob);
+   a.download='vent_config_'+new Date().toISOString().slice(0,19).replace(/:/g,'-')+'.json';
+   a.click();
+  }
+ }catch(e){alert('Ошибка: '+e.message);}
+}
+
+async function restore(){
+ const file=document.getElementById('restoreFile').files[0];
+ if(!file){alert('Выберите файл');return;}
+ try{
+  const formData=new FormData();
+  formData.append('file',file);
+  const r=await fetch('/api/restore',{method:'POST',body:formData});
+  if(r.ok)alert('Конфигурация восстановлена');
+  else alert('Ошибка: '+await r.text());
+ }catch(e){alert('Ошибка: '+e.message);}
+}
+
+async function loadLog(){
+ try{
+  const r=await fetch('/api/log');
+  if(r.ok){
+   const d=await r.json();
+   document.getElementById('logOutput').textContent=JSON.stringify(d,null,2);
+  }
+ }catch(e){alert('Ошибка: '+e.message);}
+}
+
 async function refresh(){
  try{
   const r=await fetch('/api/status'); if(!r.ok)throw new Error('HTTP '+r.status);
@@ -47,10 +261,14 @@ async function refresh(){
    html+='</table>';
   }
   document.getElementById('status').innerHTML=html;
+  updateChart(d.fan.dp,d.fan.dp_setpoint);
  }catch(err){document.getElementById('status').innerHTML='<div style="color:#f88">Ошибка: '+err.message+'</div>';}
 }
-setInterval(refresh,3000);refresh();
-</script></body></html>
+
+window.addEventListener('load',()=>{initChart();setInterval(refresh,3000);refresh();});
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</body></html>
 )HTML";
 
 void WebUI::begin() {
@@ -146,5 +364,40 @@ void WebUI::setupRoutes() {
 
     server_.on("/api/log", HTTP_GET, [](AsyncWebServerRequest *req){
         req->send(200,"application/json",eventLog.toJson(EVENT_LOG_SIZE));
+    });
+
+    // MQTT конфигурация - чтение/запись через веб-интерфейс
+    server_.on("/api/mqtt/config", HTTP_GET, [](AsyncWebServerRequest *req) {
+        MqttConfig cfg = storage.getMqttConfig();
+        DynamicJsonDocument doc(512);
+        doc["server"] = cfg.server[0] != '\0' ? cfg.server : MQTT_SERVER;
+        doc["port"] = cfg.port;
+        doc["user"] = cfg.user;
+        doc["client_id"] = MQTT_CLIENT_ID;
+        doc["root"] = MQTT_ROOT;
+        String out;
+        serializeJson(doc, out);
+        req->send(200, "application/json", out);
+    });
+
+    server_.on("/api/mqtt/config", HTTP_POST, [](AsyncWebServerRequest *req) {
+        if (!req->hasParam("server") || !req->hasParam("port")) {
+            req->send(400, "text/plain", "missing params"); return;
+        }
+        String server = req->getParam("server")->value();
+        uint16_t port = req->getParam("port")->value().toInt();
+        String user = req->hasParam("user") ? req->getParam("user")->value() : "";
+        String pass = req->hasParam("pass") ? req->getParam("pass")->value() : "";
+
+        // Сохраняем в NVS
+        storage.setMqttServer(server.c_str());
+        storage.setMqttPort(port);
+        storage.setMqttUser(user.c_str());
+        storage.setMqttPass(pass.c_str());
+
+        // Перезагружаем ESP32 для применения настроек
+        req->send(200, "text/plain", "ok");
+        delay(500);
+        ESP.restart();
     });
 }

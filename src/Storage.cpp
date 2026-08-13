@@ -68,6 +68,26 @@ void Storage::setWinterMode(bool v)  { setB("winter_mode", v); }
 bool Storage::getPowerLast()         { return getB("power_last", false); }
 void Storage::setPowerLast(bool v)   { setB("power_last", v); }
 
+// ---- MQTT конфигурация ----
+MqttConfig Storage::getMqttConfig() {
+    MqttConfig cfg;
+    prefs.getString("mqtt_server", cfg.server, sizeof(cfg.server));
+    cfg.port = prefs.getUShort("mqtt_port", MQTT_PORT);
+    prefs.getString("mqtt_user", cfg.user, sizeof(cfg.user));
+    prefs.getString("mqtt_pass", cfg.pass, sizeof(cfg.pass));
+    return cfg;
+}
+void Storage::setMqttConfig(const MqttConfig &cfg) {
+    prefs.putString("mqtt_server", cfg.server);
+    prefs.putUShort("mqtt_port", cfg.port);
+    prefs.putString("mqtt_user", cfg.user);
+    prefs.putString("mqtt_pass", cfg.pass);
+}
+void Storage::setMqttServer(const char* server) { prefs.putString("mqtt_server", server); }
+void Storage::setMqttPort(uint16_t port)        { prefs.putUShort("mqtt_port", port); }
+void Storage::setMqttUser(const char* user)     { prefs.putString("mqtt_user", user); }
+void Storage::setMqttPass(const char* pass)     { prefs.putString("mqtt_pass", pass); }
+
 // ---- CO2 / заслонки ----
 float Storage::getCo2Deadband()            { return getF("co2_db", Defaults::co2_deadband); }
 void  Storage::setCo2Deadband(float v)     { setF("co2_db", v); }
