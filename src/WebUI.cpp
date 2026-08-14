@@ -517,7 +517,7 @@ void WebUI::setupRoutes() {
             // Сервисный режим: немедленно применяем позицию
             if (en && mqttManager.serviceMode()) {
                 float pos = dampers.getManualPos((uint8_t)room);
-                dampers.serviceSetAngle((uint8_t)room, pos / 100.0f * 180.0f);
+                dampers.serviceSetPercent((uint8_t)room, pos);
             }
         }
         else if (cmd == "manual_pos") {
@@ -526,7 +526,7 @@ void WebUI::setupRoutes() {
             dampers.setManualPos((uint8_t)room, pos);
             // Сервисный режим: пишем в серво напрямую (update() не вызывается)
             if (mqttManager.serviceMode()) {
-                dampers.serviceSetAngle((uint8_t)room, pos / 100.0f * 180.0f);
+                dampers.serviceSetPercent((uint8_t)room, pos);
             }
         }
         else if (cmd == "co2_target") {

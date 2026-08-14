@@ -1,0 +1,42 @@
+```
+# PlatformIO build artifacts
+.pio/build/
+.pio/libdeps/
+.pio/project.checksum
+.integrity.dat
+
+# Compiled files
+*.o
+*.obj
+*.a
+*.so
+*.dll
+*.exe
+*.bin
+*.elf
+*.map
+
+# Dependencies
+lib/
+
+# Build directories
+build/
+dist/
+target/
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# IDE files
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db
+```
