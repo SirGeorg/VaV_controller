@@ -5,7 +5,7 @@
 //  Vent Controller v4 — общая конфигурация, пины, константы
 // ============================================================
 
-#define FW_VERSION      "4.0.0"
+#define FW_VERSION      "4.1.0"
 #define FW_BUILD_DATE   __DATE__ " " __TIME__
 
 // ---------- Сеть ----------
@@ -18,6 +18,11 @@
 // ---------- MQTT ----------
 #define MQTT_ROOT             "vent"
 #define MQTT_CLIENT_ID        "vent-controller"
+// Дефолтные параметры MQTT-брокера (задайте свои; переопределяются через веб-UI)
+#define MQTT_SERVER           "192.168.1.222"
+#define MQTT_PORT             1883
+#define MQTT_USER             "mos"
+#define MQTT_PASS             "mosmos"
 #define MQTT_KEEPALIVE_S      30
 #define MQTT_RECONNECT_MS     5000
 
@@ -103,6 +108,7 @@ namespace Defaults {
     const uint32_t heater_min_fan_runtime_s  = 180;
 
     const uint32_t duct_sensor_timeout_s = 120;
+    const uint32_t sensor_grace_s        = 3;   // короткий грэйс перед аварией отсутствия датчика
 }
 
 namespace Valid {

@@ -23,15 +23,24 @@ bool EventLog::timeIsSynced() {
 void EventLog::add(const String &msg) {
     time_t now = timeIsSynced() ? time(nullptr) : 0;
     buf[head].ts = now;
-    strncpy(buf[head].msg, msg.c_str(), sizeof(buf[head].msg) - 1);
-    buf[head].msg[sizeof(buf[head].msg) - 1] = '\0';
+
+    const char* src = msg.c_str();
+    size_t n = strlen(src);
+    size_t cap = sizeof(buf[head].msg) - 1;
+    if (n > cap) n = cap;
+    // Не режем многобайтовый UTF-8 символ: откатываемся до границы символа,
+    // иначе в конце строки окажется «битый» байт.
+    while (n > 1 && ((uint8_t)src[n] & 0xC0) == 0x80) n--;
+    memcpy(buf[head].msg, src, n);
+    buf[head].msg[n] = '\0';
+
     head = (head + 1) % EVENT_LOG_SIZE;
     if (count < EVENT_LOG_SIZE) count++;
 }
 
 String EventLog::toJson(uint8_t maxCount) {
     if (maxCount > count) maxCount = count;
-    DynamicJsonDocument doc(256 + maxCount * 96);
+    DynamicJsonDocument doc(256 + maxCount * 192);
     JsonArray arr = doc.to<JsonArray>();
 
     // Идём от самой новой записи к более старым
@@ -39,6 +48,16 @@ String EventLog::toJson(uint8_t maxCount) {
     for (uint8_t i = 0; i < maxCount; i++) {
         JsonObject o = arr.createNestedObject();
         o["ts"] = (uint32_t)buf[idx].ts;
+        // Человекочитаемое время в локальном поясе устройства (UTC+3)
+        if (buf[idx].ts > 0) {
+            struct tm tmv;
+            localtime_r(&buf[idx].ts, &tmv);
+            char tbuf[24] = {0};
+            strftime(tbuf, sizeof(tbuf), "%d.%m.%Y %H:%M:%S", &tmv);
+            o["time"] = tbuf;
+        } else {
+            o["time"] = "";
+        }
         o["msg"] = buf[idx].msg;
         idx = (idx == 0) ? (EVENT_LOG_SIZE - 1) : (idx - 1);
     }

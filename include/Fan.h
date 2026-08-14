@@ -24,7 +24,7 @@
 // ============================================================
 
 enum class FanPhase : uint8_t { OFF, STARTING, RAMPING, RUNNING, STOPPING, FAULT };
-enum class FanFaultCode : uint8_t { NONE = 0, LOW_PRESSURE = 1, HIGH_PRESSURE = 2 };
+enum class FanFaultCode : uint8_t { NONE = 0, LOW_PRESSURE = 1, HIGH_PRESSURE = 2, SENSOR_LOOP = 3 };
 
 class Fan {
 public:
@@ -47,6 +47,10 @@ public:
     float pwmPct() const { return currentPwmPct_; }
     float dpSetpoint() const { return dpSetpoint_; }
     float dpMeasured() const { return sensors.pressurePa(); }
+    void setDpTunings(float kp, float ki, float kd); // сохранить в NVS и применить live
+    float dpKp() const { return dpPid_.kp(); }
+    float dpKi() const { return dpPid_.ki(); }
+    float dpKd() const { return dpPid_.kd(); }
     bool  faultLatched() const { return storage.getFanFaultLatched(); }
     uint8_t faultCode() const { return storage.getFanFaultCode(); }
     float   faultPressureAtTrip() const { return storage.getFanFaultTemp(); }
@@ -66,9 +70,11 @@ private:
 
     unsigned long lowTimerStartMs_ = 0;
     unsigned long highTimerStartMs_ = 0;
+    unsigned long pressureSensorGraceMs_ = 0;
 
     void applyPwm(float pct);
     void checkPressureAlarms(float dtSeconds);
+    void checkPressureSensor(unsigned long graceMs);  // отсутствие датчика давления (фазы 1-4)
 };
 
 extern Fan fan;
