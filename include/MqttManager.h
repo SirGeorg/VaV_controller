@@ -24,6 +24,8 @@ public:
 
     bool powerOn() const { return powerOn_; }
     bool serviceMode() const { return serviceMode_; }
+    void setPower(bool on);        // общий для MQTT и веб-интерфейса
+    void setServiceMode(bool on);
 
     void publishState();          // раз в N секунд — общее состояние
     void publishHaDiscovery();
@@ -33,7 +35,9 @@ private:
 
     WiFiClient wifiClient_;
     PubSubClient client_{wifiClient_};
-    String mqttUser_, mqttPass_;
+    String mqttServer_, mqttUser_, mqttPass_;  // копии, т.к. PubSubClient хранит указатель на строку
+    String root_;       // корневой MQTT-топик (из NVS или дефолт)
+    String clientId_;   // Client ID (из NVS или дефолт)
     unsigned long lastReconnectAttempt_ = 0;
     unsigned long lastStatePublishMs_ = 0;
 

@@ -17,15 +17,33 @@ struct MqttManagerTrampolineHelper {
 };
 
 void MqttManager::begin(const char* server, uint16_t port, const char* user, const char* pass) {
+    mqttServer_ = server ? server : "";
     mqttUser_ = user ? user : "";
     mqttPass_ = pass ? pass : "";
-    client_.setServer(server, port);
+    MqttConfig c = storage.getMqttConfig();
+    clientId_ = c.client_id[0] ? c.client_id : MQTT_CLIENT_ID;
+    root_     = c.root[0]      ? c.root      : MQTT_ROOT;
+    // PubSubClient::setServer хранит указатель без копирования, поэтому
+    // передаём стабильную строку-член класса (не локальную переменную).
+    client_.setServer(mqttServer_.c_str(), port);
     client_.setBufferSize(1024);
     client_.setCallback(MqttManagerTrampolineHelper::call);
     Serial.print("[MQTT] init server=");
     Serial.print(server);
     Serial.print(":");
     Serial.println(port);
+}
+
+void MqttManager::setPower(bool on) {
+    powerOn_ = on;
+    storage.setPowerLast(on);
+    if (on) { fan.requestOn();  eventLog.add("Power ON"); }
+    else    { fan.requestOff(); eventLog.add("Power OFF"); }
+}
+
+void MqttManager::setServiceMode(bool on) {
+    serviceMode_ = on;
+    eventLog.add(on ? "Service mode ON" : "Service mode OFF");
 }
 
 void MqttManager::publishRetained(const String &topic, const String &payload) {
@@ -36,12 +54,12 @@ void MqttManager::publishRetained(const String &topic, const String &payload) {
 }
 
 void MqttManager::subscribeAll() {
-    bool ok1 = client_.subscribe((String(MQTT_ROOT) + "/set/#").c_str());
-    bool ok2 = client_.subscribe((String(MQTT_ROOT) + "/room/+/set/#").c_str());
-    bool ok3 = client_.subscribe((String(MQTT_ROOT) + "/room/+/data/#").c_str());
-    bool ok4 = client_.subscribe((String(MQTT_ROOT) + "/service/#").c_str());
-    bool ok5 = client_.subscribe((String(MQTT_ROOT) + "/config/restore").c_str());
-    bool ok6 = client_.subscribe((String(MQTT_ROOT) + "/config/backup_request").c_str());
+    bool ok1 = client_.subscribe((root_ + "/set/#").c_str());
+    bool ok2 = client_.subscribe((root_ + "/room/+/set/#").c_str());
+    bool ok3 = client_.subscribe((root_ + "/room/+/data/#").c_str());
+    bool ok4 = client_.subscribe((root_ + "/service/#").c_str());
+    bool ok5 = client_.subscribe((root_ + "/config/restore").c_str());
+    bool ok6 = client_.subscribe((root_ + "/config/backup_request").c_str());
     if (!(ok1 && ok2 && ok3 && ok4 && ok5 && ok6)) Serial.println("[MQTT] one or more subscriptions failed");
 }
 
@@ -51,13 +69,13 @@ void MqttManager::loop() {
         if (now - lastReconnectAttempt_ >= MQTT_RECONNECT_MS) {
             lastReconnectAttempt_ = now;
             if (!WiFi.isConnected()) return;
-            String willTopic = String(MQTT_ROOT) + "/status";
+            String willTopic = root_ + "/status";
             bool ok;
             if (mqttUser_.length()) {
-                ok = client_.connect(MQTT_CLIENT_ID, mqttUser_.c_str(), mqttPass_.c_str(),
+                ok = client_.connect(clientId_.c_str(), mqttUser_.c_str(), mqttPass_.c_str(),
                                      willTopic.c_str(), 0, true, "offline");
             } else {
-                ok = client_.connect(MQTT_CLIENT_ID, willTopic.c_str(), 0, true, "offline");
+                ok = client_.connect(clientId_.c_str(), willTopic.c_str(), 0, true, "offline");
             }
             if (ok) {
                 client_.publish(willTopic.c_str(), "online", true);
@@ -94,7 +112,7 @@ void MqttManager::serviceModeTick() {
 }
 
 void MqttManager::handleCommand(const String &topic, const String &payload) {
-    String root = String(MQTT_ROOT) + "/";
+    String root = root_ + "/";
     if (!topic.startsWith(root)) return;
     String sub = topic.substring(root.length());
 
@@ -157,7 +175,10 @@ void MqttManager::handleCommand(const String &topic, const String &payload) {
         if (rest.startsWith("servo/")) {
             int n = rest.substring(6).toInt() - 1;
             if (n < 0 || n >= ROOM_COUNT) return;
-            dampers.serviceSetAngle(n, payload.toFloat());
+            float angle = payload.toFloat();
+            Serial.print("[SERVICE] servo idx="); Serial.print(n);
+            Serial.print(" angle="); Serial.println(angle);
+            dampers.serviceSetAngle(n, angle);
             serviceServoCmdMs_[n] = millis();
             return;
         }
@@ -169,24 +190,13 @@ void MqttManager::handleCommand(const String &topic, const String &payload) {
         return;
     }
     if (sub == "config/backup_request") {
-        publishRetained(String(MQTT_ROOT) + "/config/backup", storage.exportJson());
+        publishRetained(root_ + "/config/backup", storage.exportJson());
         return;
     }
 
-    if (sub == "set/power") {
-        bool on = payload.toInt() != 0;
-        powerOn_ = on;
-        storage.setPowerLast(on);
-        if (on) { fan.requestOn(); eventLog.add("Power ON"); }
-        else    { fan.requestOff(); eventLog.add("Power OFF"); }
-        return;
-    }
+    if (sub == "set/power") { setPower(payload.toInt() != 0); return; }
     if (sub == "set/winter_mode") { storage.setWinterMode(payload.toInt() != 0); return; }
-    if (sub == "set/service_mode") {
-        serviceMode_ = payload.toInt() != 0;
-        eventLog.add(serviceMode_ ? "Service mode ON" : "Service mode OFF");
-        return;
-    }
+    if (sub == "set/service_mode") { setServiceMode(payload.toInt() != 0); return; }
 
     if (sub == "set/co2_deadband") { storage.setCo2Deadband(payload.toFloat()); return; }
     if (sub == "set/co2_alarm_threshold") { storage.setCo2AlarmThreshold(payload.toFloat()); return; }
@@ -204,8 +214,12 @@ void MqttManager::handleCommand(const String &topic, const String &payload) {
     if (sub == "set/min_fan_step") { storage.setMinFanStep(payload.toFloat()); return; }
     if (sub == "set/min_fan_speed") { storage.setMinFanSpeed(payload.toFloat()); return; }
     if (sub == "set/min_dp_step") { storage.setMinDpStep(payload.toFloat()); return; }
+    if (sub == "set/dp_kp") { fan.setDpTunings(payload.toFloat(), fan.dpKi(), fan.dpKd()); return; }
+    if (sub == "set/dp_ki") { fan.setDpTunings(fan.dpKp(), payload.toFloat(), fan.dpKd()); return; }
+    if (sub == "set/dp_kd") { fan.setDpTunings(fan.dpKp(), fan.dpKi(), payload.toFloat()); return; }
     if (sub == "set/flow_alarm_threshold") { storage.setFlowAlarmThreshold(payload.toFloat()); return; }
     if (sub == "set/dp_within_setpoint_pct") { storage.setDpWithinSetpointPct(payload.toFloat()); return; }
+    if (sub == "set/filter_alarm_threshold") { sensors.setFilterAlarmThreshold(payload.toFloat()); return; }
 
     if (sub == "set/heater_target_temp") { storage.setHeaterTargetTemp(payload.toFloat()); return; }
     if (sub == "set/heater_deadband_low") { storage.setHeaterDeadbandLow(payload.toFloat()); return; }
@@ -228,7 +242,7 @@ void MqttManager::publishState() {
         doc["uptime_s"] = millis() / 1000;
         doc["outdoor_temp"] = sensors.outdoorTempValid() ? sensors.outdoorTemp() : NAN;
         String out; serializeJson(doc, out);
-        publishRetained(String(MQTT_ROOT) + "/state", out);
+        publishRetained(root_ + "/state", out);
     }
 
     for (uint8_t i = 0; i < ROOM_COUNT; i++) {
@@ -236,19 +250,19 @@ void MqttManager::publishState() {
         const bool co2Fresh = sensors.isRoomCo2Fresh(i);
         const bool tempFresh = sensors.isRoomTempFresh(i);
 
-        DynamicJsonDocument doc(256);
+        DynamicJsonDocument doc(384);
         doc["co2"] = rd.co2;
         doc["temp"] = rd.temp;
         doc["pos"] = dampers.getPos(i);
         doc["max_pos"] = dampers.getMaxPos(i);
-        doc["manual"] = dampers.isManual(i);
+        doc["manual_mode"] = dampers.isManual(i);
         doc["co2_fresh"] = co2Fresh;
         doc["temp_fresh"] = tempFresh;
         doc["data_fresh"] = co2Fresh && tempFresh;
         doc["block_reason"] = (int)dampers.getBlockReason(i);
 
         String out; serializeJson(doc, out);
-        publishRetained(String(MQTT_ROOT) + "/room/" + String(i + 1) + "/state", out);
+        publishRetained(root_ + "/room/" + String(i + 1) + "/state", out);
     }
 
     {
@@ -265,7 +279,7 @@ void MqttManager::publishState() {
         doc["fault_code"] = fan.faultCode();
         doc["fault_dp_at_trip"] = fan.faultPressureAtTrip();
         String out; serializeJson(doc, out);
-        publishRetained(String(MQTT_ROOT) + "/fan/state", out);
+        publishRetained(root_ + "/fan/state", out);
     }
 
     {
@@ -277,10 +291,21 @@ void MqttManager::publishState() {
         doc["fault_code"] = heater.faultCode();
         doc["fault_temp_at_trip"] = heater.faultTempAtTrip();
         String out; serializeJson(doc, out);
-        publishRetained(String(MQTT_ROOT) + "/heater/state", out);
+        publishRetained(root_ + "/heater/state", out);
     }
 
-    publishRetained(String(MQTT_ROOT) + "/log", eventLog.toJson(EVENT_LOG_PUBLISH_COUNT));
+    publishRetained(root_ + "/log", eventLog.toJson(EVENT_LOG_PUBLISH_COUNT));
+
+    // Filter sensor state
+    {
+        DynamicJsonDocument doc(256);
+        doc["pressure"] = sensors.filterSensorOk() ? sensors.filterPressurePa() : NAN;
+        doc["sensor_ok"] = sensors.filterSensorOk();
+        doc["alarm_active"] = sensors.filterAlarmActive();
+        doc["alarm_threshold"] = sensors.getFilterAlarmThreshold();
+        String out; serializeJson(doc, out);
+        publishRetained(root_ + "/filter/state", out);
+    }
 }
 
 void MqttManager::publishHaDiscovery() {
@@ -307,7 +332,7 @@ void MqttManager::publishHaDiscovery() {
         publishRetained("homeassistant/sensor/vent_" + objId + "/config", out);
     };
 
-    String root = String(MQTT_ROOT);
+    String root = root_;
     pubSwitch("power", "Vent Power", root + "/set/power", root + "/state", "{{ value_json.power }}");
     pubSwitch("winter_mode", "Vent Winter Mode", root + "/set/winter_mode", root + "/state", "{{ value_json.winter_mode }}");
     pubSensor("outdoor_temp", "Outdoor Temp", root + "/state", "{{ value_json.outdoor_temp }}", "°C");
@@ -315,6 +340,8 @@ void MqttManager::publishHaDiscovery() {
     pubSensor("fan_dp", "Fan Pressure", root + "/fan/state", "{{ value_json.dp }}", "Pa");
     pubSensor("fan_dp_setpoint", "Fan Pressure Setpoint", root + "/fan/state", "{{ value_json.dp_setpoint }}", "Pa");
     pubSensor("flow_pct", "Air Flow", root + "/fan/state", "{{ value_json.flow_pct }}", "%");
+    pubSensor("filter_pressure", "Filter Pressure", root + "/filter/state", "{{ value_json.pressure }}", "Pa");
+    pubSensor("filter_alarm", "Filter Alarm", root + "/filter/state", "{{ value_json.alarm_active }}", "");
     pubSensor("heater_stage", "Heater Stage", root + "/heater/state", "{{ value_json.stage }}", "");
     pubSensor("heater_t_supply", "Supply Temp", root + "/heater/state", "{{ value_json.t_supply }}", "°C");
 

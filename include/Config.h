@@ -2,10 +2,10 @@
 #include <Arduino.h>
 
 // ============================================================
-//  Vent Controller v4 — общая конфигурация, пины, константы
+//  Vent Controller v4.2 — общая конфигурация, пины, константы
 // ============================================================
 
-#define FW_VERSION      "4.0.0"
+#define FW_VERSION      "4.2.0"
 #define FW_BUILD_DATE   __DATE__ " " __TIME__
 
 // ---------- Сеть ----------
@@ -18,6 +18,11 @@
 // ---------- MQTT ----------
 #define MQTT_ROOT             "vent"
 #define MQTT_CLIENT_ID        "vent-controller"
+// Дефолтные параметры MQTT-брокера (задайте свои; переопределяются через веб-UI)
+#define MQTT_SERVER           "192.168.1.222"
+#define MQTT_PORT             1883
+#define MQTT_USER             "mos"
+#define MQTT_PASS             "mosmos"
 #define MQTT_KEEPALIVE_S      30
 #define MQTT_RECONNECT_MS     5000
 
@@ -35,7 +40,9 @@ static const uint8_t PIN_RELAY[HEATER_STAGES] = {4, 16, 17, 5, 18};
 #define PIN_FAN_PWM           25
 #define FAN_PWM_FREQ_HZ       1000
 #define FAN_PWM_RES_BITS      10
-#define FAN_PWM_CHANNEL       0
+// ВАЖНО: канал НЕ должен совпадать с автоматически выделяемыми ESP32Servo
+// (серво занимают каналы 0,1,8,9). Используем свободный канал 2.
+#define FAN_PWM_CHANNEL       2
 
 // ---------- DS18B20 ----------
 #define PIN_ONEWIRE_OUTDOOR   15
@@ -54,6 +61,7 @@ enum DsSensorIdx {
 #define ADS1115_ADDR          0x48
 #define ADS_CH_PRESSURE       0
 #define ADS_CH_FLOW           1
+#define ADS_CH_FILTER         2
 #define ADS_VDD_VOLTAGE       3.3f
 #define ADS_MAX_INPUT_V       (ADS_VDD_VOLTAGE - 0.1f)
 #define SHUNT_OHM             160.0f
@@ -103,6 +111,13 @@ namespace Defaults {
     const uint32_t heater_min_fan_runtime_s  = 180;
 
     const uint32_t duct_sensor_timeout_s = 120;
+    const uint32_t sensor_grace_s        = 3;   // короткий грэйс перед аварией отсутствия датчика
+
+    // --- Filter pressure sensor ---
+    const float    filter_alarm_threshold  = 300.0f;  // Pa, авария если превышено > 1 мин
+    const uint32_t filter_poll_interval_ms = 10000;   // опрос раз в 10 сек
+    const uint8_t  filter_avg_samples      = 5;       // скользящее среднее
+    const uint32_t filter_alarm_duration_s = 60;      // длительность превышения для аварии
 }
 
 namespace Valid {

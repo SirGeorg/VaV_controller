@@ -18,6 +18,8 @@ void Dampers::begin() {
 void Dampers::writeServoAngle(uint8_t idx, float angleDeg) {
     angleDeg = constrain(angleDeg, 0.0f, 180.0f);
     servos[idx].write((int)angleDeg);
+    // Держим статус согласованным с фактическим углом
+    state[idx].commandedPos = angleDeg / 180.0f * 100.0f;
 }
 
 void Dampers::writeServoPercent(uint8_t idx, float pct) {
@@ -44,6 +46,11 @@ void Dampers::serviceSetAngle(uint8_t idx, float angleDeg) {
     writeServoAngle(idx, angleDeg);
 }
 
+void Dampers::serviceSetPercent(uint8_t idx, float pct) {
+    if (idx >= ROOM_COUNT) return;
+    writeServoPercent(idx, pct);   // 0..100 %, обновляет commandedPos
+}
+
 void Dampers::calibrateServo(uint8_t idx, uint16_t pulseMinUs, uint16_t pulseMaxUs) {
     if (idx >= ROOM_COUNT) return;
     storage.setServoCal(idx, pulseMinUs, pulseMaxUs);
@@ -55,6 +62,7 @@ float Dampers::getPos(uint8_t idx) { return (idx < ROOM_COUNT) ? state[idx].comm
 float Dampers::getMaxPos(uint8_t idx) { return (idx < ROOM_COUNT) ? storage.getRoom(idx).max_pos : 100; }
 RoomBlockReason Dampers::getBlockReason(uint8_t idx) { return (idx < ROOM_COUNT) ? state[idx].blockReason : RoomBlockReason::NONE; }
 bool Dampers::isManual(uint8_t idx) { return (idx < ROOM_COUNT) ? state[idx].manualMode : false; }
+float Dampers::getManualPos(uint8_t idx) { return (idx < ROOM_COUNT) ? state[idx].manualPos : 0; }
 
 bool Dampers::anyFreecoolActive() {
     for (uint8_t i = 0; i < ROOM_COUNT; i++) {
@@ -71,12 +79,21 @@ float Dampers::maxPosAcrossRooms() {
     return m;
 }
 
-void Dampers::update(float dtSeconds, bool systemOn) {
+void Dampers::update(float dtSeconds, bool systemOn, bool serviceMode) {
     const float co2Deadband = storage.getCo2Deadband();
     const float co2AlarmThreshold = storage.getCo2AlarmThreshold();
     const float minServoStepDeg = storage.getMinServoStep();
     const float minServoStepPct = minServoStepDeg / 180.0f * 100.0f;
     const float freecoolDeadband = storage.getTempFreecoolDeadband();
+
+    if (serviceMode) {
+        // Сервисный режим: не пересчитываем цели CO2/управления, а лишь
+        // периодически призываем серво к последней команде (удерживаем позицию).
+        for (uint8_t i = 0; i < ROOM_COUNT; i++) {
+            writeServoPercent(i, state[i].commandedPos);
+        }
+        return;
+    }
 
     for (uint8_t i = 0; i < ROOM_COUNT; i++) {
         RoomSettings rs = storage.getRoom(i);
@@ -93,6 +110,10 @@ void Dampers::update(float dtSeconds, bool systemOn) {
             s.blockReason = RoomBlockReason::NONE;
             s.piIntegral = 0;
             s.freecoolAdditive = 0;
+        } else if (s.manualMode) {
+            // Ручной режим имеет приоритет над CO2-форсажем и отсутствием данных.
+            target = constrain(s.manualPos, rs.min_pos, rs.max_pos);
+            s.blockReason = RoomBlockReason::NONE;
         } else if (co2Fresh && rd.co2 >= co2AlarmThreshold) {
             // Аварийный форсаж зависит только от свежести CO2.
             target = rs.max_pos;
@@ -103,9 +124,6 @@ void Dampers::update(float dtSeconds, bool systemOn) {
             s.blockReason = RoomBlockReason::NO_DATA;
             s.piIntegral = 0;
             s.freecoolAdditive = 0;
-        } else if (s.manualMode) {
-            target = constrain(s.manualPos, rs.min_pos, rs.max_pos);
-            s.blockReason = RoomBlockReason::NONE;
         } else {
             // CO2-регулирование работает только по свежему CO2.
             float basePos = 0.0f;

@@ -68,6 +68,32 @@ void Storage::setWinterMode(bool v)  { setB("winter_mode", v); }
 bool Storage::getPowerLast()         { return getB("power_last", false); }
 void Storage::setPowerLast(bool v)   { setB("power_last", v); }
 
+// ---- MQTT конфигурация ----
+MqttConfig Storage::getMqttConfig() {
+    MqttConfig cfg = {};
+    prefs.getString("mqtt_server", cfg.server, sizeof(cfg.server));
+    cfg.port = prefs.getUShort("mqtt_port", MQTT_PORT);
+    prefs.getString("mqtt_user", cfg.user, sizeof(cfg.user));
+    prefs.getString("mqtt_pass", cfg.pass, sizeof(cfg.pass));
+    prefs.getString("mqtt_client_id", cfg.client_id, sizeof(cfg.client_id));
+    prefs.getString("mqtt_root", cfg.root, sizeof(cfg.root));
+    return cfg;
+}
+void Storage::setMqttConfig(const MqttConfig &cfg) {
+    prefs.putString("mqtt_server", cfg.server);
+    prefs.putUShort("mqtt_port", cfg.port);
+    prefs.putString("mqtt_user", cfg.user);
+    prefs.putString("mqtt_pass", cfg.pass);
+    prefs.putString("mqtt_client_id", cfg.client_id);
+    prefs.putString("mqtt_root", cfg.root);
+}
+void Storage::setMqttServer(const char* server) { prefs.putString("mqtt_server", server); }
+void Storage::setMqttPort(uint16_t port)        { prefs.putUShort("mqtt_port", port); }
+void Storage::setMqttUser(const char* user)     { prefs.putString("mqtt_user", user); }
+void Storage::setMqttPass(const char* pass)     { prefs.putString("mqtt_pass", pass); }
+void Storage::setMqttClientId(const char* id)   { prefs.putString("mqtt_client_id", id); }
+void Storage::setMqttRoot(const char* root)     { prefs.putString("mqtt_root", root); }
+
 // ---- CO2 / заслонки ----
 float Storage::getCo2Deadband()            { return getF("co2_db", Defaults::co2_deadband); }
 void  Storage::setCo2Deadband(float v)     { setF("co2_db", v); }
@@ -122,6 +148,16 @@ float Storage::getFlowAlarmThreshold() { return getF("flow_al", Defaults::flow_a
 void  Storage::setFlowAlarmThreshold(float v) { setF("flow_al", v); }
 float Storage::getDpWithinSetpointPct() { return getF("dp_within", Defaults::dp_within_setpoint_pct); }
 void  Storage::setDpWithinSetpointPct(float v) { setF("dp_within", v); }
+float Storage::getDpKp() { return getF("dp_kp", Defaults::dp_kp); }
+void  Storage::setDpKp(float v) { setF("dp_kp", v); }
+float Storage::getDpKi() { return getF("dp_ki", Defaults::dp_ki); }
+void  Storage::setDpKi(float v) { setF("dp_ki", v); }
+float Storage::getDpKd() { return getF("dp_kd", Defaults::dp_kd); }
+void  Storage::setDpKd(float v) { setF("dp_kd", v); }
+
+// --- Filter pressure sensor ---
+float Storage::getFilterAlarmThreshold() { return getF("filt_al", Defaults::filter_alarm_threshold); }
+void  Storage::setFilterAlarmThreshold(float v) { setF("filt_al", v); }
 
 // ---- нагреватель ----
 float Storage::getHeaterTargetTemp()   { return getF("h_target", Defaults::heater_target_temp); }
@@ -191,6 +227,10 @@ String Storage::exportJson() {
     doc["min_dp_step"] = getMinDpStep();
     doc["flow_alarm_threshold"] = getFlowAlarmThreshold();
     doc["dp_within_setpoint_pct"] = getDpWithinSetpointPct();
+    doc["dp_kp"] = getDpKp();
+    doc["dp_ki"] = getDpKi();
+    doc["dp_kd"] = getDpKd();
+    doc["filter_alarm_threshold"] = getFilterAlarmThreshold();
     doc["heater_target_temp"] = getHeaterTargetTemp();
     doc["heater_deadband_low"] = getHeaterDeadbandLow();
     doc["heater_deadband_high"] = getHeaterDeadbandHigh();
@@ -235,6 +275,10 @@ bool Storage::importJson(const String &json) {
     if (doc.containsKey("min_dp_step")) setMinDpStep(doc["min_dp_step"]);
     if (doc.containsKey("flow_alarm_threshold")) setFlowAlarmThreshold(doc["flow_alarm_threshold"]);
     if (doc.containsKey("dp_within_setpoint_pct")) setDpWithinSetpointPct(doc["dp_within_setpoint_pct"]);
+    if (doc.containsKey("dp_kp")) setDpKp(doc["dp_kp"]);
+    if (doc.containsKey("dp_ki")) setDpKi(doc["dp_ki"]);
+    if (doc.containsKey("dp_kd")) setDpKd(doc["dp_kd"]);
+    if (doc.containsKey("filter_alarm_threshold")) setFilterAlarmThreshold(doc["filter_alarm_threshold"]);
     if (doc.containsKey("heater_target_temp")) setHeaterTargetTemp(doc["heater_target_temp"]);
     if (doc.containsKey("heater_deadband_low")) setHeaterDeadbandLow(doc["heater_deadband_low"]);
     if (doc.containsKey("heater_deadband_high")) setHeaterDeadbandHigh(doc["heater_deadband_high"]);

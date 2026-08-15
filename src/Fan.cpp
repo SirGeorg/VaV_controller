@@ -7,11 +7,20 @@ void Fan::begin() {
     ledcAttachPin(PIN_FAN_PWM, FAN_PWM_CHANNEL);
     applyPwm(0);
     dpSetpoint_ = storage.getDpMin();
+    // Коэффициенты PID хранятся в NVS (управляются через веб/MQTT)
+    dpPid_.setTunings(storage.getDpKp(), storage.getDpKi(), storage.getDpKd());
 
     // При старте ESP32, если аварии сохранились в NVS как активные -> остаёмся в FAULT (п.3, п.4)
     if (storage.getFanFaultLatched()) {
         phase_ = FanPhase::FAULT;
     }
+}
+
+void Fan::setDpTunings(float kp, float ki, float kd) {
+    storage.setDpKp(kp);
+    storage.setDpKi(ki);
+    storage.setDpKd(kd);
+    dpPid_.setTunings(kp, ki, kd);
 }
 
 void Fan::applyPwm(float pct) {
@@ -113,7 +122,29 @@ void Fan::checkPressureAlarms(float dtSeconds) {
     }
 }
 
+void Fan::checkPressureSensor(unsigned long graceMs) {
+    // Отсутствие показаний датчика давления (обрыв 4-20мА/NaN) на рабочих фазах 1-4
+    // — аварийный случай. Активируем только при активном управлении вентилятором.
+    bool inControl = phase_ == FanPhase::STARTING || phase_ == FanPhase::RAMPING ||
+                     phase_ == FanPhase::RUNNING || phase_ == FanPhase::STOPPING;
+    if (!inControl) { pressureSensorGraceMs_ = 0; return; }
+
+    if (!sensors.pressureSensorOk()) {
+        // Датчик не даёт показаний: запускаем короткий грэйс, если ещё не запущен
+        if (pressureSensorGraceMs_ == 0) pressureSensorGraceMs_ = millis();
+        if (millis() - pressureSensorGraceMs_ >= graceMs) {
+            pressureSensorGraceMs_ = 0;
+            triggerFault(FanFaultCode::SENSOR_LOOP);
+        }
+    } else {
+        // Показания вернулись — сбрасываем грэйс (случайный глитч не создаёт аварию)
+        pressureSensorGraceMs_ = 0;
+    }
+}
+
 void Fan::update(float dtSeconds) {
+    // Проверка наличия датчика давления — фазы 1-4 (до value-аварий давления)
+    checkPressureSensor(Defaults::sensor_grace_s * 1000UL);
     checkPressureAlarms(dtSeconds);
 
     if (phase_ == FanPhase::FAULT) {

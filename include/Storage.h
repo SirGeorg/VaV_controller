@@ -18,6 +18,15 @@ struct RoomSettings {
     bool  temp_mode_enable;
 };
 
+struct MqttConfig {
+    char server[64];
+    uint16_t port;
+    char user[32];
+    char pass[32];
+    char client_id[32];
+    char root[32];
+};
+
 class Storage {
 public:
     void begin();
@@ -25,6 +34,16 @@ public:
     // ---- общие ----
     bool getWinterMode();      void setWinterMode(bool v);
     bool getPowerLast();       void setPowerLast(bool v); // для UI, не для автозапуска (п.4)
+
+    // ---- MQTT конфигурация ----
+    MqttConfig getMqttConfig();
+    void setMqttConfig(const MqttConfig &cfg);
+    void setMqttServer(const char* server);
+    void setMqttPort(uint16_t port);
+    void setMqttUser(const char* user);
+    void setMqttPass(const char* pass);
+    void setMqttClientId(const char* id);
+    void setMqttRoot(const char* root);
 
     // ---- CO2 / заслонки ----
     float getCo2Deadband();          void setCo2Deadband(float v);
@@ -55,6 +74,12 @@ public:
     float getMinDpStep();    void setMinDpStep(float v);
     float getFlowAlarmThreshold(); void setFlowAlarmThreshold(float v);
     float getDpWithinSetpointPct(); void setDpWithinSetpointPct(float v);
+    float getDpKp(); void setDpKp(float v);
+    float getDpKi(); void setDpKi(float v);
+    float getDpKd(); void setDpKd(float v);
+
+    // --- Filter pressure sensor ---
+    float getFilterAlarmThreshold(); void setFilterAlarmThreshold(float v);
 
     // ---- нагреватель ----
     float getHeaterTargetTemp();     void setHeaterTargetTemp(float v);

@@ -39,6 +39,14 @@ public:
     float flowPct();
     bool  flowSensorOk();
 
+    // --- Filter pressure sensor ---
+    float filterPressurePa();
+    bool  filterSensorOk();
+    bool  filterAlarmActive();
+    void  resetFilterAlarm();
+    void  setFilterAlarmThreshold(float v);
+    float getFilterAlarmThreshold();
+
     void setRoomData(uint8_t idx, float co2, float temp);
     RoomData getRoomData(uint8_t idx);
 
@@ -50,6 +58,10 @@ public:
     void setFlowCal(float offset, float scale);
     void getPressureCal(float &offset, float &scale);
     void getFlowCal(float &offset, float &scale);
+    
+    // Filter sensor calibration
+    void setFilterCal(float offset, float scale);
+    void getFilterCal(float &offset, float &scale);
 
 private:
     OneWire oneWireOutdoor{PIN_ONEWIRE_OUTDOOR};
@@ -75,6 +87,17 @@ private:
     uint8_t pressureBufIdx = 0, flowBufIdx = 0;
     bool pressureBufFull = false, flowBufFull = false;
     float pressureRawMa = NAN, flowRawMa = NAN;
+
+    // Filter pressure sensor
+    float filterBuf[10] = {0};  // max 10 samples
+    uint8_t filterBufIdx = 0;
+    bool filterBufFull = false;
+    float filterRawMa = NAN;
+    float filterCalOffset = 0, filterCalScale = 1;
+    unsigned long lastFilterPollMs = 0;
+    unsigned long filterAlarmStartMs = 0;
+    bool filterAlarmLatched = false;
+    float filterAlarmThreshold = Defaults::filter_alarm_threshold;
 
     float pressureCalOffset = 0, pressureCalScale = 1;
     float flowCalOffset = 0, flowCalScale = 1;

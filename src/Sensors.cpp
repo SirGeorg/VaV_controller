@@ -34,6 +34,8 @@ void Sensors::begin() {
 
     storage.getAnalogCal("dp", pressureCalOffset, pressureCalScale);
     storage.getAnalogCal("flow", flowCalOffset, flowCalScale);
+    storage.getAnalogCal("filter", filterCalOffset, filterCalScale);
+    filterAlarmThreshold = storage.getFilterAlarmThreshold();
     startDsConversion();
 }
 
@@ -119,6 +121,15 @@ void Sensors::update() {
         filteredAverage(pressureBuf, pressureBufIdx, pressureBufFull, pressureRawMa);
         filteredAverage(flowBuf, flowBufIdx, flowBufFull, flowRawMa);
     }
+
+    // --- Filter pressure sensor: poll every 10 seconds ---
+    unsigned long now = millis();
+    if (adsOk && (now - lastFilterPollMs >= Defaults::filter_poll_interval_ms)) {
+        lastFilterPollMs = now;
+        int16_t rawFilt = ads.readADC_SingleEnded(ADS_CH_FILTER);
+        filterRawMa = adsVoltsToMa(rawFilt);
+        filteredAverage(filterBuf, filterBufIdx, filterBufFull, filterRawMa);
+    }
 }
 
 float Sensors::adsVoltsToMa(int16_t raw) {
@@ -183,6 +194,73 @@ float Sensors::flowPct() {
 
 bool Sensors::flowSensorOk() {
     return !isnan(flowRawMa) && flowRawMa >= LOOP_BREAK_MA;
+}
+
+// --- Filter pressure sensor ---
+float Sensors::filterPressurePa() {
+    float avgMa = filterRawMa;
+    uint8_t n = filterBufFull ? Defaults::filter_avg_samples : filterBufIdx;
+    if (n > 0) {
+        float sum = 0;
+        for (uint8_t i = 0; i < n; i++) sum += filterBuf[i];
+        avgMa = sum / n;
+    }
+    return filterCalOffset + filterCalScale * (avgMa - 4.0f);
+}
+
+bool Sensors::filterSensorOk() {
+    return !isnan(filterRawMa) && filterRawMa >= LOOP_BREAK_MA;
+}
+
+bool Sensors::filterAlarmActive() {
+    if (!filterSensorOk()) {
+        // If sensor is not OK, clear any pending/latched alarm — the hardware signal is invalid
+        filterAlarmLatched = false;
+        filterAlarmStartMs = 0;
+        return false;
+    }
+    
+    float pressure = filterPressurePa();
+    bool exceeded = pressure > filterAlarmThreshold;
+    
+    if (exceeded) {
+        if (filterAlarmStartMs == 0) {
+            filterAlarmStartMs = millis();
+        }
+        if (millis() - filterAlarmStartMs >= Defaults::filter_alarm_duration_s * 1000UL) {
+            filterAlarmLatched = true;
+        }
+    } else {
+        filterAlarmStartMs = 0;
+    }
+    
+    return filterAlarmLatched;
+}
+
+void Sensors::resetFilterAlarm() {
+    filterAlarmLatched = false;
+    filterAlarmStartMs = 0;
+    eventLog.add("Filter: alarm reset manually");
+}
+
+void Sensors::setFilterAlarmThreshold(float v) {
+    filterAlarmThreshold = v;
+    storage.setFilterAlarmThreshold(v);
+}
+
+float Sensors::getFilterAlarmThreshold() {
+    return filterAlarmThreshold;
+}
+
+void Sensors::setFilterCal(float offset, float scale) {
+    filterCalOffset = offset;
+    filterCalScale = scale;
+    storage.setAnalogCal("filter", offset, scale);
+}
+
+void Sensors::getFilterCal(float &offset, float &scale) {
+    offset = filterCalOffset;
+    scale = filterCalScale;
 }
 
 void Sensors::setRoomData(uint8_t idx, float co2, float temp) {

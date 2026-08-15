@@ -38,7 +38,8 @@ public:
     void begin();
     // systemOn=false (установка выключена/останавливается) -> все заслонки
     // безусловно идут в min_pos, независимо от CO2/ручного/аварийного режима
-    void update(float dtSeconds, bool systemOn);
+    // serviceMode=true -> не пересчитываем цели, только удерживаем текущую позицию серво
+    void update(float dtSeconds, bool systemOn, bool serviceMode = false);
 
     // --- ручной режим (через MQTT) ---
     void setManualMode(uint8_t idx, bool enable);
@@ -46,6 +47,7 @@ public:
 
     // --- сервисный режим (напрямую, без ограничений) ---
     void serviceSetAngle(uint8_t idx, float angleDeg);
+    void serviceSetPercent(uint8_t idx, float pct);   // для веб-управления в сервисном режиме
 
     // --- глобальный флаг разрешения фрикулинга (по уличной температуре) ---
     void setFreecoolAllowed(bool allowed);
@@ -56,6 +58,7 @@ public:
     float getMaxPos(uint8_t idx);
     RoomBlockReason getBlockReason(uint8_t idx);
     bool  isManual(uint8_t idx);
+    float getManualPos(uint8_t idx);  // ручная уставка % (для веб-интерфейса)
 
     // --- нужно для расчёта dp_setpoint (макс. позиция среди комнат) ---
     float maxPosAcrossRooms();

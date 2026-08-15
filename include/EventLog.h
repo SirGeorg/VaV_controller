@@ -10,7 +10,7 @@
 
 struct LogEntry {
     time_t  ts;
-    char    msg[64];
+    char    msg[128];   // хранение UTF-8: русский текст — 2 байта/символ
 };
 
 class EventLog {

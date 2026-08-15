@@ -14,6 +14,9 @@ public:
         : kp_(kp), ki_(ki), kd_(kd), outMin_(outMin), outMax_(outMax) {}
 
     void setTunings(float kp, float ki, float kd) { kp_ = kp; ki_ = ki; kd_ = kd; }
+    float kp() const { return kp_; }
+    float ki() const { return ki_; }
+    float kd() const { return kd_; }
     void setOutputLimits(float mn, float mx) { outMin_ = mn; outMax_ = mx; }
     void reset() { integral_ = 0; lastError_ = 0; firstRun_ = true; }
 
