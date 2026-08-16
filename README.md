@@ -1,4 +1,4 @@
-# Vent Controller v4.4.0 (ESP32 / PlatformIO / Arduino)
+# Vent Controller v4.4.1 (ESP32 / PlatformIO / Arduino)
 
 Контроллер приточно-вытяжной установки с рекуператором/электронагревателем,
 4 комнатами (CO2 + заслонка), контуром давления вентилятора, MQTT/Home Assistant,
