@@ -141,6 +141,7 @@ function fnum(x,d){return(x===null||x===undefined)?'—':Number(x).toFixed(d);}
 function fresh(x){return x?'OK':'нет';}
 
 function initChart(){
+ if(typeof Chart==='undefined'){console.error('Chart.js not loaded');return;}
  const ctx=document.getElementById('dpChart').getContext('2d');
  chart=new Chart(ctx,{
   type:'line',
@@ -431,7 +432,7 @@ h+='<h3>Аварийные пороги dP (Па)</h3><table style="max-width:52
 
 window.addEventListener('load',()=>{initChart();setInterval(refresh,3000);refresh();});
 </script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="/chart.min.js"></script>
 </body></html>
 )HTML";
 
