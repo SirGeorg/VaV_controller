@@ -198,6 +198,12 @@ void MqttManager::handleCommand(const String &topic, const String &payload) {
     if (sub == "set/winter_mode") { storage.setWinterMode(payload.toInt() != 0); return; }
     if (sub == "set/service_mode") { setServiceMode(payload.toInt() != 0); return; }
 
+    // Прямое управление вентилятором в сервисном режиме
+    if (sub == "set/fan_pwm" && serviceMode_) {
+        fan.setServicePwm(payload.toFloat());
+        return;
+    }
+
     if (sub == "set/co2_deadband") { storage.setCo2Deadband(payload.toFloat()); return; }
     if (sub == "set/co2_alarm_threshold") { storage.setCo2AlarmThreshold(payload.toFloat()); return; }
     if (sub == "set/min_servo_step") { storage.setMinServoStep(payload.toFloat()); return; }
@@ -277,6 +283,8 @@ void MqttManager::publishState() {
         doc["flow_sensor_ok"] = sensors.flowSensorOk();
         doc["fault_latched"] = fan.faultLatched();
         doc["fault_code"] = fan.faultCode();
+        doc["service_pwm"] = fan.servicePwm();
+        doc["in_service_mode"] = fan.inServiceMode();
         doc["fault_dp_at_trip"] = fan.faultPressureAtTrip();
         String out; serializeJson(doc, out);
         publishRetained(root_ + "/fan/state", out);
