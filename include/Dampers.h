@@ -5,6 +5,10 @@
 #include "Storage.h"
 #include "Sensors.h"
 
+// Forward declaration to avoid circular dependency
+class Fan;
+extern Fan fan;
+
 // ============================================================
 //  Dampers (RoomCtrl) — управление 4 заслонками:
 //   - PI-регулирование по CO2 с зоной нечувствительности (co2_deadband)

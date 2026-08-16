@@ -95,6 +95,11 @@ void Dampers::update(float dtSeconds, bool systemOn, bool serviceMode) {
         return;
     }
 
+    // Если система выключена, но вентилятор ещё в режиме выбега (STOPPING),
+    // заслонки остаются в текущем положении до полной остановки вентилятора.
+    // Движение к min_pos начинается только после перехода вентилятора в OFF.
+    bool fanStopped = fan.isStoppingOrStopped() && !systemOn;
+
     for (uint8_t i = 0; i < ROOM_COUNT; i++) {
         RoomSettings rs = storage.getRoom(i);
         RoomState &s = state[i];
@@ -106,10 +111,16 @@ void Dampers::update(float dtSeconds, bool systemOn, bool serviceMode) {
         float target;
 
         if (!systemOn) {
-            target = rs.min_pos;
-            s.blockReason = RoomBlockReason::NONE;
-            s.piIntegral = 0;
-            s.freecoolAdditive = 0;
+            // Система выключена: движемся к min_pos ТОЛЬКО после остановки вентилятора
+            if (fanStopped) {
+                target = rs.min_pos;
+                s.blockReason = RoomBlockReason::NONE;
+                s.piIntegral = 0;
+                s.freecoolAdditive = 0;
+            } else {
+                // Вентилятор ещё в выбеге — удерживаем текущую позицию
+                target = s.commandedPos;
+            }
         } else if (s.manualMode) {
             // Ручной режим имеет приоритет над CO2-форсажем и отсутствием данных.
             target = constrain(s.manualPos, rs.min_pos, rs.max_pos);

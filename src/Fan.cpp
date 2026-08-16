@@ -1,4 +1,5 @@
 #include "Fan.h"
+#include "Dampers.h"
 
 Fan fan;
 
@@ -196,12 +197,12 @@ void Fan::update(float dtSeconds) {
         }
 
         case FanPhase::STOPPING: {
+            // Во время выбега PWM не подаётся — вентилятор останавливается по инерции.
+            applyPwm(0);
             if (millis() - phaseStartMs_ >= Defaults::fan_coastdown_time_s * 1000UL) {
-                applyPwm(0);
                 phase_ = FanPhase::OFF;
                 eventLog.add("Fan: выбег завершён, остановлен");
             }
-            // во время выбега поддерживаем последнюю рабочую скорость (без резкого стопа)
             break;
         }
 
