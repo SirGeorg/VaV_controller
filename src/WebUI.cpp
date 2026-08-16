@@ -10,7 +10,7 @@ WebUI webUi;
 
 static const char INDEX_HTML[] PROGMEM = R"HTML(
 <!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">
-<title>Vent Controller v4.2</title><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vent Controller</title><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 body{font-family:sans-serif;background:#111;color:#eee;margin:0;padding:16px}
 h1{font-size:18px}.card{background:#1c1c1c;border-radius:8px;padding:12px;margin-bottom:10px}
