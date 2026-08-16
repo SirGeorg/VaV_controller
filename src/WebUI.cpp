@@ -125,7 +125,7 @@ canvas{width:100%!important;height:100%!important}
 
 <script>
 const DP_HISTORY_MAX=200;
-let dpHistory={labels:[],dp:[],dpSetpoint:[],filter:[],flow:[]};
+let dpHistory={labels:[],dp:[],dpSetpoint:[],filter:[],flow:[],fanPwm:[]};
 let chart=null;
 
 function showTab(name){
@@ -148,7 +148,8 @@ function initChart(){
    {label:'dP (Pa)',data:dpHistory.dp,borderColor:'#0a84ff',tension:0.3,pointRadius:0,yAxisID:'y'},
    {label:'Уставка (Pa)',data:dpHistory.dpSetpoint,borderColor:'#30d158',tension:0.3,pointRadius:0,yAxisID:'y'},
    {label:'Фильтр (Pa)',data:dpHistory.filter,borderColor:'#ff9f0a',tension:0.3,pointRadius:0,yAxisID:'y'},
-   {label:'Расход (%)',data:dpHistory.flow,borderColor:'#bf5af2',tension:0.3,pointRadius:0,yAxisID:'y1'}
+   {label:'Расход (%)',data:dpHistory.flow,borderColor:'#bf5af2',tension:0.3,pointRadius:0,yAxisID:'y1'},
+   {label:'Вентилятор (%)',data:dpHistory.fanPwm,borderColor:'#ff3b30',tension:0.3,pointRadius:0,yAxisID:'y1'}
   ]},
   options:{responsive:true,maintainAspectRatio:false,animation:false,
    scales:{
@@ -175,7 +176,7 @@ function initChart(){
  });
 }
 
-async function updateChart(dp,dpSp,filterPressure,flowPct){
+async function updateChart(dp,dpSp,filterPressure,flowPct,fanPwm){
  const now=new Date();
  const timeLabel=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')+':'+now.getSeconds().toString().padStart(2,'0');
  dpHistory.labels.push(timeLabel);
@@ -183,12 +184,14 @@ async function updateChart(dp,dpSp,filterPressure,flowPct){
  dpHistory.dpSetpoint.push(dpSp);
  dpHistory.filter.push(filterPressure);
  dpHistory.flow.push(flowPct);
+ dpHistory.fanPwm.push(fanPwm);
  if(dpHistory.labels.length>DP_HISTORY_MAX){
   dpHistory.labels.shift();
   dpHistory.dp.shift();
   dpHistory.dpSetpoint.shift();
   dpHistory.filter.shift();
   dpHistory.flow.shift();
+  dpHistory.fanPwm.shift();
  }
  if(chart){
   chart.data.labels=dpHistory.labels;
@@ -196,6 +199,7 @@ async function updateChart(dp,dpSp,filterPressure,flowPct){
   chart.data.datasets[1].data=dpHistory.dpSetpoint;
   chart.data.datasets[2].data=dpHistory.filter;
   chart.data.datasets[3].data=dpHistory.flow;
+  chart.data.datasets[4].data=dpHistory.fanPwm;
   chart.update();
  }
 }
@@ -326,7 +330,7 @@ async function refresh(){
   }
   document.getElementById('status').innerHTML=html;
   renderControl(d);
-  updateChart(d.fan.dp,d.fan.dp_setpoint, d.filter?d.filter.pressure:NaN, d.fan.flow_pct);
+  updateChart(d.fan.dp,d.fan.dp_setpoint, d.filter?d.filter.pressure:NaN, d.fan.flow_pct, d.fan.pwm);
  }catch(err){document.getElementById('status').innerHTML='<div style="color:#f88">Ошибка: '+err.message+'</div>';}
 }
 
