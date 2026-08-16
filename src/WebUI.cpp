@@ -385,6 +385,16 @@ function renderControl(d){
   '<tr><td>Сервисный</td><td>'+(d.service_mode?'ВКЛ':'ВЫКЛ')+'</td>'+
     '<td><input type="checkbox" '+(d.service_mode?'checked':'')+' onchange="sendService(this.checked?1:0)"></td></tr>'+
   '</table>';
+
+// Управление вентилятором в сервисном режиме
+if (d.service_mode) {
+  h += '<h3>Вентилятор (сервисный режим)</h3><table style="max-width:520px">'+
+    '<tr><td>PWM:</td><td>'+fnum(d.fan.pwm,0)+' %</td>'+
+    '<td><input type="range" id="fan_pwm_slider" min="0" max="100" value="'+Math.round(d.fan.service_pwm||0)+'" oninput="this.nextElementSibling.value=this.value" style="width:180px"> <output>'+Math.round(d.fan.service_pwm||0)+'</output> %</td>'+
+    '<td><button onclick="sendFanPwm(document.getElementById(\'fan_pwm_slider\').value)">Установить</button></td></tr>'+
+    '<tr><td>Статус сервиса:</td><td>'+(d.fan.in_service_mode?'<b style="color:#ff9f0a">активно</b>':'Ожидание')+'</td></tr>'+
+    '</table>';
+}
  (d.rooms||[]).forEach((x,i)=>{
   h+='<h3>Комната '+(i+1)+'</h3><table style="max-width:560px">'+
    '<tr><td>CO₂ '+fnum(x.co2,0)+' ('+fresh(x.co2_fresh)+')</td>'+

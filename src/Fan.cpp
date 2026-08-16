@@ -76,7 +76,15 @@ void Fan::resetFault() {
     phase_ = FanPhase::OFF;
     lowTimerStartMs_ = 0;
     highTimerStartMs_ = 0;
+    inServiceMode_ = false;
+    servicePwm_ = 0;
     eventLog.add("Fan: авария сброшена вручную");
+}
+
+void Fan::setServicePwm(float pct) {
+    inServiceMode_ = true;
+    servicePwm_ = constrain(pct, 0.0f, 100.0f);
+    applyPwm(servicePwm_);
 }
 
 bool Fan::fanRuntimeOk() const {
@@ -150,6 +158,12 @@ void Fan::update(float dtSeconds) {
 
     if (phase_ == FanPhase::FAULT) {
         applyPwm(0);
+        return;
+    }
+
+    // Сервисный режим: прямое управление PWM, байпас стандартной логики
+    if (inServiceMode_) {
+        applyPwm(servicePwm_);
         return;
     }
 
