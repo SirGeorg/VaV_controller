@@ -347,6 +347,7 @@ function sendCo2(i){cmd('co2_target&room='+(+i+1)+'&val='+document.getElementByI
 function sendRoomLimits(i){cmd('room_pos_limits&room='+(+i+1)+'&min='+document.getElementById('lim_min_'+i).value+'&max='+document.getElementById('lim_max_'+i).value);}
 function sendDpLimits(){cmd('dp_limits&min='+document.getElementById('dp_min_inp').value+'&max='+document.getElementById('dp_max_inp').value);}
 function sendFilterAlarmThreshold(){cmd('filter_alarm_threshold&val='+document.getElementById('filter_alarm_thresh_inp').value);}
+function sendDpAlarmThresholds(){cmd('dp_alarm_thresholds&low='+document.getElementById('dp_alarm_low_inp').value+'&high='+document.getElementById('dp_alarm_high_inp').value);}
 function sendPids(){cmd('pids&kp='+document.getElementById('pid_kp').value+'&ki='+document.getElementById('pid_ki').value+'&kd='+document.getElementById('pid_kd').value);}
 function resetFan(){cmd('reset&target=fan');}
 function resetHeater(){cmd('reset&target=heater');}
@@ -390,10 +391,14 @@ function renderControl(d){
    (x.block_reason>0?'<tr><td style="color:#f88">Блок</td><td colspan="2">'+blockReasonText(x.block_reason)+'</td></tr>':'')+
    '</table>';
  });
- h+='<h3>Уставки давления</h3><table style="max-width:520px"><tr>'+
+h+='<h3>Уставки давления</h3><table style="max-width:520px"><tr>'+
   '<td>min</td><td><input id="dp_min_inp" type="number" value="'+fnum(d.fan.dp_min,0)+'"></td>'+
   '<td>max</td><td><input id="dp_max_inp" type="number" value="'+fnum(d.fan.dp_max,0)+'"></td>'+
   '<td><button onclick="sendDpLimits()">OK</button></td></tr></table>';
+h+='<h3>Аварийные пороги dP (Па)</h3><table style="max-width:520px"><tr>'+
+  '<td>Low</td><td><input id="dp_alarm_low_inp" type="number" step="1" value="'+fnum(d.fan.dp_alarm_low,0)+'"></td>'+
+  '<td>High</td><td><input id="dp_alarm_high_inp" type="number" step="1" value="'+fnum(d.fan.dp_alarm_high,0)+'"></td>'+
+  '<td><button onclick="sendDpAlarmThresholds()">OK</button></td></tr></table>';
  h+='<h3>Фильтр (порог аварии, Па)</h3><table style="max-width:520px"><tr>'+
   '<td>Порог</td><td><input id="filter_alarm_thresh_inp" type="number" step="1" value="'+fnum(d.filter.alarm_threshold,0)+'"></td>'+
   '<td><button onclick="sendFilterAlarmThreshold()">OK</button></td></tr></table>';
@@ -451,6 +456,8 @@ void WebUI::setupRoutes() {
         fanObj["dp_setpoint"] = fan.dpSetpoint();
         fanObj["dp_min"] = storage.getDpMin();
         fanObj["dp_max"] = storage.getDpMax();
+        fanObj["dp_alarm_low"] = storage.getDpAlarmLow();
+        fanObj["dp_alarm_high"] = storage.getDpAlarmHigh();
         fanObj["flow_pct"] = sensors.flowPct();
         fanObj["fault_latched"] = fan.faultLatched();
         fanObj["fault_code"] = fan.faultCode();
@@ -580,6 +587,10 @@ void WebUI::setupRoutes() {
         else if (cmd == "dp_limits") {
             storage.setDpMin(req->getParam("min")->value().toFloat());
             storage.setDpMax(req->getParam("max")->value().toFloat());
+        }
+        else if (cmd == "dp_alarm_thresholds") {
+            storage.setDpAlarmLow(req->getParam("low")->value().toFloat());
+            storage.setDpAlarmHigh(req->getParam("high")->value().toFloat());
         }
         else if (cmd == "filter_alarm_threshold") {
             sensors.setFilterAlarmThreshold(req->getParam("val")->value().toFloat());
