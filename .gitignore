@@ -1,0 +1,63 @@
+```
+# Compiled and build artifacts
+*.o
+*.obj
+*.out
+build/
+dist/
+
+# Dependencies
+.venv/
+venv/
+node_modules/
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# Editors
+.vscode/
+.idea/
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# C/C++
+*.a
+*.so
+*.dylib
+*.dll
+*.lib
+*.slo
+*.lo
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# MyPy
+.mypy_cache/
+
+# PyTest
+.pytest_cache/
+
+# Gradle
+.gradle/
+target/
+
+# Temporary files
+*.tmp
+*~
+.DS_Store
+Thumbs.db
+```

@@ -3,9 +3,12 @@
 #include "Config.h"
 #include "Storage.h"
 #include "Sensors.h"
-#include "Dampers.h"
 #include "PIDController.h"
 #include "EventLog.h"
+
+// Forward declaration to avoid circular dependency
+class Dampers;
+extern Dampers dampers;
 
 // ============================================================
 //  Fan — вентилятор + контур давления.
@@ -54,6 +57,10 @@ public:
     bool  faultLatched() const { return storage.getFanFaultLatched(); }
     uint8_t faultCode() const { return storage.getFanFaultCode(); }
     float   faultPressureAtTrip() const { return storage.getFanFaultTemp(); }
+
+    // Геттер для проверки завершения выбега: true, если вентилятор в STOPPING или OFF
+    // (используется Dampers для определения момента начала движения заслонок к min_pos)
+    bool isStoppingOrStopped() const { return phase_ == FanPhase::STOPPING || phase_ == FanPhase::OFF; }
 
     // используется Heater'ом для проверки условий разрешения нагрева
     bool fanRuntimeOk() const;                 // фан работает >= heater_min_fan_runtime_s
