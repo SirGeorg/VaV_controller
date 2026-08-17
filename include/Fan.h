@@ -3,9 +3,12 @@
 #include "Config.h"
 #include "Storage.h"
 #include "Sensors.h"
-#include "Dampers.h"
 #include "PIDController.h"
 #include "EventLog.h"
+
+// Forward declaration to avoid circular dependency
+class Dampers;
+extern Dampers dampers;
 
 // ============================================================
 //  Fan — вентилятор + контур давления.
@@ -55,10 +58,19 @@ public:
     uint8_t faultCode() const { return storage.getFanFaultCode(); }
     float   faultPressureAtTrip() const { return storage.getFanFaultTemp(); }
 
+    // Геттер для проверки завершения выбега: true, если вентилятор в STOPPING или OFF
+    // (используется Dampers для определения момента начала движения заслонок к min_pos)
+    bool isStoppingOrStopped() const { return phase_ == FanPhase::STOPPING || phase_ == FanPhase::OFF; }
+
     // используется Heater'ом для проверки условий разрешения нагрева
     bool fanRuntimeOk() const;                 // фан работает >= heater_min_fan_runtime_s
     bool dpWithinSetpointOk() const;            // |dp - dp_setpoint| <= dp_within_setpoint_pct
     bool isRunning() const { return phase_ == FanPhase::RAMPING || phase_ == FanPhase::RUNNING; }
+
+    // Прямое управление PWM в сервисном режиме (байпас PID-контура)
+    void setServicePwm(float pct);
+    float servicePwm() const { return servicePwm_; }
+    bool inServiceMode() const { return inServiceMode_; }
 
 private:
     FanPhase phase_ = FanPhase::OFF;
@@ -71,6 +83,10 @@ private:
     unsigned long lowTimerStartMs_ = 0;
     unsigned long highTimerStartMs_ = 0;
     unsigned long pressureSensorGraceMs_ = 0;
+
+    // Сервисный режим: прямое управление PWM (байпас PID)
+    bool inServiceMode_ = false;
+    float servicePwm_ = 0;
 
     void applyPwm(float pct);
     void checkPressureAlarms(float dtSeconds);

@@ -1,4 +1,5 @@
 #include "Fan.h"
+#include "Dampers.h"
 
 Fan fan;
 
@@ -75,7 +76,15 @@ void Fan::resetFault() {
     phase_ = FanPhase::OFF;
     lowTimerStartMs_ = 0;
     highTimerStartMs_ = 0;
+    inServiceMode_ = false;
+    servicePwm_ = 0;
     eventLog.add("Fan: авария сброшена вручную");
+}
+
+void Fan::setServicePwm(float pct) {
+    inServiceMode_ = true;
+    servicePwm_ = constrain(pct, 0.0f, 100.0f);
+    applyPwm(servicePwm_);
 }
 
 bool Fan::fanRuntimeOk() const {
@@ -152,6 +161,12 @@ void Fan::update(float dtSeconds) {
         return;
     }
 
+    // Сервисный режим: прямое управление PWM, байпас стандартной логики
+    if (inServiceMode_) {
+        applyPwm(servicePwm_);
+        return;
+    }
+
     switch (phase_) {
         case FanPhase::OFF:
             applyPwm(0);
@@ -196,12 +211,12 @@ void Fan::update(float dtSeconds) {
         }
 
         case FanPhase::STOPPING: {
+            // Во время выбега PWM не подаётся — вентилятор останавливается по инерции.
+            applyPwm(0);
             if (millis() - phaseStartMs_ >= Defaults::fan_coastdown_time_s * 1000UL) {
-                applyPwm(0);
                 phase_ = FanPhase::OFF;
                 eventLog.add("Fan: выбег завершён, остановлен");
             }
-            // во время выбега поддерживаем последнюю рабочую скорость (без резкого стопа)
             break;
         }
 

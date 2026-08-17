@@ -10,7 +10,7 @@ WebUI webUi;
 
 static const char INDEX_HTML[] PROGMEM = R"HTML(
 <!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">
-<title>Vent Controller v4.2</title><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vent Controller</title><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 body{font-family:sans-serif;background:#111;color:#eee;margin:0;padding:16px}
 h1{font-size:18px}.card{background:#1c1c1c;border-radius:8px;padding:12px;margin-bottom:10px}
@@ -25,7 +25,7 @@ canvas{width:100%!important;height:100%!important}
 .tab-content{display:none}
 .tab-content.active{display:block}
 </style></head><body>
-<h1>Vent Controller v4.2 — vent.local</h1>
+<h1>Vent Controller — vent.local</h1>
 <div style="margin-bottom:10px">
  <button class="tab-btn active" onclick="showTab('status')">Статус</button>
  <button class="tab-btn" onclick="showTab('mqtt')">MQTT</button>
@@ -125,7 +125,7 @@ canvas{width:100%!important;height:100%!important}
 
 <script>
 const DP_HISTORY_MAX=200;
-let dpHistory={labels:[],dp:[],dpSetpoint:[],filter:[],flow:[]};
+let dpHistory={labels:[],dp:[],dpSetpoint:[],filter:[],flow:[],fanPwm:[]};
 let chart=null;
 
 function showTab(name){
@@ -148,7 +148,8 @@ function initChart(){
    {label:'dP (Pa)',data:dpHistory.dp,borderColor:'#0a84ff',tension:0.3,pointRadius:0,yAxisID:'y'},
    {label:'Уставка (Pa)',data:dpHistory.dpSetpoint,borderColor:'#30d158',tension:0.3,pointRadius:0,yAxisID:'y'},
    {label:'Фильтр (Pa)',data:dpHistory.filter,borderColor:'#ff9f0a',tension:0.3,pointRadius:0,yAxisID:'y'},
-   {label:'Расход (%)',data:dpHistory.flow,borderColor:'#bf5af2',tension:0.3,pointRadius:0,yAxisID:'y1'}
+   {label:'Расход (%)',data:dpHistory.flow,borderColor:'#bf5af2',tension:0.3,pointRadius:0,yAxisID:'y1'},
+   {label:'Вентилятор (%)',data:dpHistory.fanPwm,borderColor:'#ff3b30',tension:0.3,pointRadius:0,yAxisID:'y1'}
   ]},
   options:{responsive:true,maintainAspectRatio:false,animation:false,
    scales:{
@@ -175,7 +176,7 @@ function initChart(){
  });
 }
 
-async function updateChart(dp,dpSp,filterPressure,flowPct){
+async function updateChart(dp,dpSp,filterPressure,flowPct,fanPwm){
  const now=new Date();
  const timeLabel=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')+':'+now.getSeconds().toString().padStart(2,'0');
  dpHistory.labels.push(timeLabel);
@@ -183,12 +184,14 @@ async function updateChart(dp,dpSp,filterPressure,flowPct){
  dpHistory.dpSetpoint.push(dpSp);
  dpHistory.filter.push(filterPressure);
  dpHistory.flow.push(flowPct);
+ dpHistory.fanPwm.push(fanPwm);
  if(dpHistory.labels.length>DP_HISTORY_MAX){
   dpHistory.labels.shift();
   dpHistory.dp.shift();
   dpHistory.dpSetpoint.shift();
   dpHistory.filter.shift();
   dpHistory.flow.shift();
+  dpHistory.fanPwm.shift();
  }
  if(chart){
   chart.data.labels=dpHistory.labels;
@@ -196,6 +199,7 @@ async function updateChart(dp,dpSp,filterPressure,flowPct){
   chart.data.datasets[1].data=dpHistory.dpSetpoint;
   chart.data.datasets[2].data=dpHistory.filter;
   chart.data.datasets[3].data=dpHistory.flow;
+  chart.data.datasets[4].data=dpHistory.fanPwm;
   chart.update();
  }
 }
@@ -326,7 +330,7 @@ async function refresh(){
   }
   document.getElementById('status').innerHTML=html;
   renderControl(d);
-  updateChart(d.fan.dp,d.fan.dp_setpoint, d.filter?d.filter.pressure:NaN, d.fan.flow_pct);
+  updateChart(d.fan.dp,d.fan.dp_setpoint, d.filter?d.filter.pressure:NaN, d.fan.flow_pct, d.fan.pwm);
  }catch(err){document.getElementById('status').innerHTML='<div style="color:#f88">Ошибка: '+err.message+'</div>';}
 }
 
@@ -340,6 +344,7 @@ async function cmd(qs){
 function sendPower(v){cmd('power&on='+v);}
 function sendWinter(v){cmd('winter&on='+v);}
 function sendService(v){cmd('service&on='+v);}
+function sendFanPwm(v){cmd('fan_pwm&pwm='+v);}
 function sendTempMode(i,v){cmd('temp_mode&room='+(+i+1)+'&on='+v);}
 function sendManual(i,v){cmd('manual&room='+(+i+1)+'&on='+v);}
 function sendManualPos(i,v){cmd('manual_pos&room='+(+i+1)+'&pos='+v);}
@@ -347,6 +352,9 @@ function sendCo2(i){cmd('co2_target&room='+(+i+1)+'&val='+document.getElementByI
 function sendRoomLimits(i){cmd('room_pos_limits&room='+(+i+1)+'&min='+document.getElementById('lim_min_'+i).value+'&max='+document.getElementById('lim_max_'+i).value);}
 function sendDpLimits(){cmd('dp_limits&min='+document.getElementById('dp_min_inp').value+'&max='+document.getElementById('dp_max_inp').value);}
 function sendFilterAlarmThreshold(){cmd('filter_alarm_threshold&val='+document.getElementById('filter_alarm_thresh_inp').value);}
+function sendFlowAlarmThreshold(){cmd('flow_alarm_threshold&val='+document.getElementById('flow_alarm_thresh_inp').value);}
+function sendDpWithinSetpointPct(){cmd('dp_within_setpoint_pct&val='+document.getElementById('dp_within_setpoint_pct_inp').value);}
+function sendDpAlarmThresholds(){cmd('dp_alarm_thresholds&low='+document.getElementById('dp_alarm_low_inp').value+'&high='+document.getElementById('dp_alarm_high_inp').value);}
 function sendPids(){cmd('pids&kp='+document.getElementById('pid_kp').value+'&ki='+document.getElementById('pid_ki').value+'&kd='+document.getElementById('pid_kd').value);}
 function resetFan(){cmd('reset&target=fan');}
 function resetHeater(){cmd('reset&target=heater');}
@@ -378,6 +386,16 @@ function renderControl(d){
   '<tr><td>Сервисный</td><td>'+(d.service_mode?'ВКЛ':'ВЫКЛ')+'</td>'+
     '<td><input type="checkbox" '+(d.service_mode?'checked':'')+' onchange="sendService(this.checked?1:0)"></td></tr>'+
   '</table>';
+
+// Управление вентилятором в сервисном режиме
+if (d.service_mode) {
+  h += '<h3>Вентилятор (сервисный режим)</h3><table style="max-width:520px">'+
+    '<tr><td>PWM:</td><td>'+fnum(d.fan.pwm,0)+' %</td>'+
+    '<td><input type="range" id="fan_pwm_slider" min="0" max="100" value="'+Math.round(d.fan.service_pwm||0)+'" oninput="this.nextElementSibling.value=this.value" style="width:180px"> <output>'+Math.round(d.fan.service_pwm||0)+'</output> %</td>'+
+    '<td><button onclick="sendFanPwm(document.getElementById(\'fan_pwm_slider\').value)">Установить</button></td></tr>'+
+    '<tr><td>Статус сервиса:</td><td>'+(d.fan.in_service_mode?'<b style="color:#ff9f0a">активно</b>':'Ожидание')+'</td></tr>'+
+    '</table>';
+}
  (d.rooms||[]).forEach((x,i)=>{
   h+='<h3>Комната '+(i+1)+'</h3><table style="max-width:560px">'+
    '<tr><td>CO₂ '+fnum(x.co2,0)+' ('+fresh(x.co2_fresh)+')</td>'+
@@ -390,10 +408,20 @@ function renderControl(d){
    (x.block_reason>0?'<tr><td style="color:#f88">Блок</td><td colspan="2">'+blockReasonText(x.block_reason)+'</td></tr>':'')+
    '</table>';
  });
- h+='<h3>Уставки давления</h3><table style="max-width:520px"><tr>'+
+h+='<h3>Уставки давления</h3><table style="max-width:520px"><tr>'+
   '<td>min</td><td><input id="dp_min_inp" type="number" value="'+fnum(d.fan.dp_min,0)+'"></td>'+
   '<td>max</td><td><input id="dp_max_inp" type="number" value="'+fnum(d.fan.dp_max,0)+'"></td>'+
   '<td><button onclick="sendDpLimits()">OK</button></td></tr></table>';
+h+='<h3>Аварийные пороги dP (Па)</h3><table style="max-width:520px"><tr>'+
+  '<td>Low</td><td><input id="dp_alarm_low_inp" type="number" step="1" value="'+fnum(d.fan.dp_alarm_low,0)+'"></td>'+
+  '<td>High</td><td><input id="dp_alarm_high_inp" type="number" step="1" value="'+fnum(d.fan.dp_alarm_high,0)+'"></td>'+
+  '<td><button onclick="sendDpAlarmThresholds()">OK</button></td></tr></table>';
+ h+='<h3>Порог расхода для аварии (%)</h3><table style="max-width:520px"><tr>'+
+  '<td>Порог</td><td><input id="flow_alarm_thresh_inp" type="number" step="1" value="'+fnum(d.fan.flow_alarm_threshold,0)+'"></td>'+
+  '<td><button onclick="sendFlowAlarmThreshold()">OK</button></td></tr></table>';
+ h+='<h3>Допуск dP в уставке (%)</h3><table style="max-width:520px"><tr>'+
+  '<td>Допуск</td><td><input id="dp_within_setpoint_pct_inp" type="number" step="1" value="'+fnum(d.fan.dp_within_setpoint_pct,0)+'"></td>'+
+  '<td><button onclick="sendDpWithinSetpointPct()">OK</button></td></tr></table>';
  h+='<h3>Фильтр (порог аварии, Па)</h3><table style="max-width:520px"><tr>'+
   '<td>Порог</td><td><input id="filter_alarm_thresh_inp" type="number" step="1" value="'+fnum(d.filter.alarm_threshold,0)+'"></td>'+
   '<td><button onclick="sendFilterAlarmThreshold()">OK</button></td></tr></table>';
@@ -451,6 +479,10 @@ void WebUI::setupRoutes() {
         fanObj["dp_setpoint"] = fan.dpSetpoint();
         fanObj["dp_min"] = storage.getDpMin();
         fanObj["dp_max"] = storage.getDpMax();
+        fanObj["dp_alarm_low"] = storage.getDpAlarmLow();
+        fanObj["dp_alarm_high"] = storage.getDpAlarmHigh();
+        fanObj["flow_alarm_threshold"] = storage.getFlowAlarmThreshold();
+        fanObj["dp_within_setpoint_pct"] = storage.getDpWithinSetpointPct();
         fanObj["flow_pct"] = sensors.flowPct();
         fanObj["fault_latched"] = fan.faultLatched();
         fanObj["fault_code"] = fan.faultCode();
@@ -532,6 +564,10 @@ void WebUI::setupRoutes() {
         if (cmd == "power")                { mqttManager.setPower(req->getParam("on")->value().toInt() != 0); }
         else if (cmd == "winter")          { storage.setWinterMode(req->getParam("on")->value().toInt() != 0); }
         else if (cmd == "service")         { mqttManager.setServiceMode(req->getParam("on")->value().toInt() != 0); }
+        else if (cmd == "fan_pwm")         { 
+            float pwm = req->getParam("pwm")->value().toFloat();
+            fan.setServicePwm(pwm);
+        }
         else if (cmd == "reset") {
             String t = req->getParam("target")->value();
             if (t == "fan")    fan.resetFault();
@@ -581,8 +617,18 @@ void WebUI::setupRoutes() {
             storage.setDpMin(req->getParam("min")->value().toFloat());
             storage.setDpMax(req->getParam("max")->value().toFloat());
         }
+        else if (cmd == "dp_alarm_thresholds") {
+            storage.setDpAlarmLow(req->getParam("low")->value().toFloat());
+            storage.setDpAlarmHigh(req->getParam("high")->value().toFloat());
+        }
         else if (cmd == "filter_alarm_threshold") {
             sensors.setFilterAlarmThreshold(req->getParam("val")->value().toFloat());
+        }
+        else if (cmd == "flow_alarm_threshold") {
+            storage.setFlowAlarmThreshold(req->getParam("val")->value().toFloat());
+        }
+        else if (cmd == "dp_within_setpoint_pct") {
+            storage.setDpWithinSetpointPct(req->getParam("val")->value().toFloat());
         }
         else if (cmd == "pids") {
             fan.setDpTunings(req->getParam("kp")->value().toFloat(),
