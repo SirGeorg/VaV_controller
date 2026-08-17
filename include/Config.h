@@ -64,7 +64,7 @@ enum DsSensorIdx {
 #define ADS_CH_FILTER         2
 #define ADS_VDD_VOLTAGE       3.3f
 #define ADS_MAX_INPUT_V       (ADS_VDD_VOLTAGE - 0.1f)
-#define SHUNT_OHM             160.0f
+#define SHUNT_OHM             120.0f
 #define ADC_FILTER_SAMPLES    8
 
 namespace Defaults {
