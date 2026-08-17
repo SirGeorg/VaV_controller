@@ -344,6 +344,7 @@ async function cmd(qs){
 function sendPower(v){cmd('power&on='+v);}
 function sendWinter(v){cmd('winter&on='+v);}
 function sendService(v){cmd('service&on='+v);}
+function sendFanPwm(v){cmd('fan_pwm&pwm='+v);}
 function sendTempMode(i,v){cmd('temp_mode&room='+(+i+1)+'&on='+v);}
 function sendManual(i,v){cmd('manual&room='+(+i+1)+'&on='+v);}
 function sendManualPos(i,v){cmd('manual_pos&room='+(+i+1)+'&pos='+v);}
@@ -563,6 +564,10 @@ void WebUI::setupRoutes() {
         if (cmd == "power")                { mqttManager.setPower(req->getParam("on")->value().toInt() != 0); }
         else if (cmd == "winter")          { storage.setWinterMode(req->getParam("on")->value().toInt() != 0); }
         else if (cmd == "service")         { mqttManager.setServiceMode(req->getParam("on")->value().toInt() != 0); }
+        else if (cmd == "fan_pwm")         { 
+            float pwm = req->getParam("pwm")->value().toFloat();
+            fan.setServicePwm(pwm);
+        }
         else if (cmd == "reset") {
             String t = req->getParam("target")->value();
             if (t == "fan")    fan.resetFault();
