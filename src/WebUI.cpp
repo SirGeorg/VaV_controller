@@ -344,6 +344,7 @@ async function cmd(qs){
 function sendPower(v){cmd('power&on='+v);}
 function sendWinter(v){cmd('winter&on='+v);}
 function sendService(v){cmd('service&on='+v);}
+function sendFanPwm(v){cmd('fan_pwm&pwm='+v);}
 function sendTempMode(i,v){cmd('temp_mode&room='+(+i+1)+'&on='+v);}
 function sendManual(i,v){cmd('manual&room='+(+i+1)+'&on='+v);}
 function sendManualPos(i,v){cmd('manual_pos&room='+(+i+1)+'&pos='+v);}
@@ -385,6 +386,16 @@ function renderControl(d){
   '<tr><td>Сервисный</td><td>'+(d.service_mode?'ВКЛ':'ВЫКЛ')+'</td>'+
     '<td><input type="checkbox" '+(d.service_mode?'checked':'')+' onchange="sendService(this.checked?1:0)"></td></tr>'+
   '</table>';
+
+// Управление вентилятором в сервисном режиме
+if (d.service_mode) {
+  h += '<h3>Вентилятор (сервисный режим)</h3><table style="max-width:520px">'+
+    '<tr><td>PWM:</td><td>'+fnum(d.fan.pwm,0)+' %</td>'+
+    '<td><input type="range" id="fan_pwm_slider" min="0" max="100" value="'+Math.round(d.fan.service_pwm||0)+'" oninput="this.nextElementSibling.value=this.value" style="width:180px"> <output>'+Math.round(d.fan.service_pwm||0)+'</output> %</td>'+
+    '<td><button onclick="sendFanPwm(document.getElementById(\'fan_pwm_slider\').value)">Установить</button></td></tr>'+
+    '<tr><td>Статус сервиса:</td><td>'+(d.fan.in_service_mode?'<b style="color:#ff9f0a">активно</b>':'Ожидание')+'</td></tr>'+
+    '</table>';
+}
  (d.rooms||[]).forEach((x,i)=>{
   h+='<h3>Комната '+(i+1)+'</h3><table style="max-width:560px">'+
    '<tr><td>CO₂ '+fnum(x.co2,0)+' ('+fresh(x.co2_fresh)+')</td>'+
@@ -553,6 +564,10 @@ void WebUI::setupRoutes() {
         if (cmd == "power")                { mqttManager.setPower(req->getParam("on")->value().toInt() != 0); }
         else if (cmd == "winter")          { storage.setWinterMode(req->getParam("on")->value().toInt() != 0); }
         else if (cmd == "service")         { mqttManager.setServiceMode(req->getParam("on")->value().toInt() != 0); }
+        else if (cmd == "fan_pwm")         { 
+            float pwm = req->getParam("pwm")->value().toFloat();
+            fan.setServicePwm(pwm);
+        }
         else if (cmd == "reset") {
             String t = req->getParam("target")->value();
             if (t == "fan")    fan.resetFault();

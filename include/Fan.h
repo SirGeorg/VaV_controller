@@ -67,6 +67,11 @@ public:
     bool dpWithinSetpointOk() const;            // |dp - dp_setpoint| <= dp_within_setpoint_pct
     bool isRunning() const { return phase_ == FanPhase::RAMPING || phase_ == FanPhase::RUNNING; }
 
+    // Прямое управление PWM в сервисном режиме (байпас PID-контура)
+    void setServicePwm(float pct);
+    float servicePwm() const { return servicePwm_; }
+    bool inServiceMode() const { return inServiceMode_; }
+
 private:
     FanPhase phase_ = FanPhase::OFF;
     unsigned long phaseStartMs_ = 0;
@@ -78,6 +83,10 @@ private:
     unsigned long lowTimerStartMs_ = 0;
     unsigned long highTimerStartMs_ = 0;
     unsigned long pressureSensorGraceMs_ = 0;
+
+    // Сервисный режим: прямое управление PWM (байпас PID)
+    bool inServiceMode_ = false;
+    float servicePwm_ = 0;
 
     void applyPwm(float pct);
     void checkPressureAlarms(float dtSeconds);
