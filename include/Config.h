@@ -30,14 +30,14 @@
 #define ROOM_COUNT            4
 
 // ---------- Пины сервоприводов заслонок (по комнатам) ----------
-static const uint8_t PIN_SERVO[ROOM_COUNT] = {13, 14, 27, 26};
+static const uint8_t PIN_SERVO[ROOM_COUNT] = {39, 40, 41, 42};
 
 // ---------- Пины реле нагревателя (5 ступеней) ----------
 #define HEATER_STAGES         5
-static const uint8_t PIN_RELAY[HEATER_STAGES] = {4, 16, 17, 5, 18};
+static const uint8_t PIN_RELAY[HEATER_STAGES] = {1, 2, 4, 5, 6};
 
 // ---------- Пин управления вентилятором ----------
-#define PIN_FAN_PWM           25
+#define PIN_FAN_PWM           15
 #define FAN_PWM_FREQ_HZ       1000
 #define FAN_PWM_RES_BITS      10
 // ВАЖНО: канал НЕ должен совпадать с автоматически выделяемыми ESP32Servo
@@ -45,8 +45,8 @@ static const uint8_t PIN_RELAY[HEATER_STAGES] = {4, 16, 17, 5, 18};
 #define FAN_PWM_CHANNEL       2
 
 // ---------- DS18B20 ----------
-#define PIN_ONEWIRE_OUTDOOR   15
-#define PIN_ONEWIRE_SUPPLY    32
+#define PIN_ONEWIRE_OUTDOOR   11
+#define PIN_ONEWIRE_SUPPLY    10
 #define DS_MAX_PER_BUS        3
 #define DS_VALUE_TOLERANCE_C  3.0f
 enum DsSensorIdx {
@@ -56,8 +56,8 @@ enum DsSensorIdx {
 };
 
 // ---------- I2C / ADS1115 ----------
-#define PIN_I2C_SDA           21
-#define PIN_I2C_SCL           22
+#define PIN_I2C_SDA           8
+#define PIN_I2C_SCL           9
 #define ADS1115_ADDR          0x48
 #define ADS_CH_PRESSURE       0
 #define ADS_CH_FLOW           1
