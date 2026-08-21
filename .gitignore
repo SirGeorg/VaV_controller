@@ -1,1 +1,37 @@
-Nothing needs to be added to .gitignore since only a README.md file was modified and no build artifacts, dependencies, or temporary files were detected in the changes.
+```
+# PlatformIO build artifacts
+.pio/build/
+.pio/libdeps/
+.pio/envs/
+
+# Compiled object files
+*.o
+*.obj
+*.a
+*.so
+*.dll
+*.exe
+
+# Build outputs
+build/
+dist/
+target/
+
+# Dependencies
+lib/
+.libs/
+
+# Temporary files
+*.tmp
+*.log
+*.swp
+
+# IDE specific
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db
+
+```

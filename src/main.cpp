@@ -8,6 +8,7 @@
 #include "Heater.h"
 #include "MqttManager.h"
 #include "WebUI.h"
+#include "LedIndicator.h"
 
 // Параметры MQTT-брокера задаются в Config.h (MQTT_SERVER/PORT/USER/PASS)
 // и могут быть переопределены через веб-UI (вкладка "MQTT").
@@ -50,6 +51,8 @@ void setup() {
     Serial.println(mqttPort);
     mqttManager.begin(mqttServer, mqttPort, mqttUser, mqttPass);
 
+    ledIndicator.begin();  // Инициализация NeoPixel на GPIO 48
+
     eventLog.add("Система запущена, ожидание команды power=1");
 }
 
@@ -57,6 +60,7 @@ void loop() {
     webUi.loop();
     mqttManager.loop();
     sensors.update();     // неблокирующий опрос DS18B20 + ADS1115, вызывать часто
+    ledIndicator.update();  // обновление состояния светодиода
 
     bool powerOn = mqttManager.powerOn();
     bool serviceMode = mqttManager.serviceMode();
