@@ -368,6 +368,16 @@ void MqttManager::publishHaDiscovery() {
         String out; serializeJson(doc, out);
         publishRetained("homeassistant/sensor/vent_" + objId + "/config", out);
     };
+    auto pubButton = [&](const String &objId, const String &name, const String &cmdTopic, const String &deviceClass = "") {
+        DynamicJsonDocument doc(512);
+        doc["name"] = name;
+        doc["unique_id"] = "vent_" + objId;
+        doc["command_topic"] = cmdTopic;
+        doc["payload_press"] = "1";
+        if (deviceClass.length()) doc["device_class"] = deviceClass;
+        String out; serializeJson(doc, out);
+        publishRetained("homeassistant/button/vent_" + objId + "/config", out);
+    };
 
     String root = root_;
     pubSwitch("power", "Vent Power", root + "/set/power", root + "/state", "{{ value_json.power }}");
@@ -390,6 +400,13 @@ void MqttManager::publishHaDiscovery() {
     // Text sensors for phase and block reasons
     pubSensor("fan_phase", "Fan Phase", root + "/fan/state", "{% set p=value_json.phase|int %}{% if p==0 %}Off{% elif p==1 %}Starting{% elif p==2 %}Ramping{% elif p==3 %}Running{% elif p==4 %}Stopping{% elif p==5 %}Fault{% else %}Unknown{% endif %}", "");
     pubSensor("heater_block_reason", "Heater Block Reason", root + "/heater/state", "{% set r=value_json.block_reason|int %}{% if r==0 %}None{% elif r==1 %}System Off{% elif r==2 %}Winter Mode Off{% elif r==3 %}Outdoor Too Warm{% elif r==4 %}Freecool Active{% elif r==5 %}No Duct Data{% elif r==6 %}Fan Not Ready{% elif r==7 %}Low Flow{% elif r==8 %}Flow Sensor Fault{% elif r==9 %}Pressure Out of Range{% else %}Unknown{% endif %}", "");
+    
+    // Number for heater target temp
+    pubNumber("heater_target_temp", "Heater Target Temp", root + "/set/heater_target_temp", root + "/heater/state", "{{ value_json.t_supply }}", "°C", 10.0, 60.0, 1.0);
+    
+    // Buttons for fault reset
+    pubButton("heater_fault_reset", "Heater Fault Reset", root + "/set/heater_fault_reset", "problem");
+    pubButton("fan_fault_reset", "Fan Fault Reset", root + "/set/fan_fault_reset", "problem");
 
     for (uint8_t i = 0; i < ROOM_COUNT; i++) {
         String rt = root + "/room/" + String(i + 1) + "/state";
