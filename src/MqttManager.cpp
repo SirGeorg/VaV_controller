@@ -255,6 +255,7 @@ void MqttManager::publishState() {
         RoomData rd = sensors.getRoomData(i);
         const bool co2Fresh = sensors.isRoomCo2Fresh(i);
         const bool tempFresh = sensors.isRoomTempFresh(i);
+        RoomSettings rs = storage.getRoom(i);
 
         DynamicJsonDocument doc(384);
         doc["co2"] = rd.co2;
@@ -266,6 +267,9 @@ void MqttManager::publishState() {
         doc["temp_fresh"] = tempFresh;
         doc["data_fresh"] = co2Fresh && tempFresh;
         doc["block_reason"] = (int)dampers.getBlockReason(i);
+        doc["temp_target"] = rs.temp_target;
+        doc["co2_target"] = rs.co2_target;
+        doc["temp_mode_enable"] = rs.temp_mode_enable;
 
         String out; serializeJson(doc, out);
         publishRetained(root_ + "/room/" + String(i + 1) + "/state", out);
@@ -329,6 +333,31 @@ void MqttManager::publishHaDiscovery() {
         String out; serializeJson(doc, out);
         publishRetained("homeassistant/switch/vent_" + objId + "/config", out);
     };
+    auto pubBinarySensor = [&](const String &objId, const String &name, const String &stateTopic, const String &valueTemplate, const String &deviceClass = "") {
+        DynamicJsonDocument doc(512);
+        doc["name"] = name;
+        doc["unique_id"] = "vent_" + objId;
+        doc["state_topic"] = stateTopic;
+        doc["value_template"] = valueTemplate;
+        if (deviceClass.length()) doc["device_class"] = deviceClass;
+        String out; serializeJson(doc, out);
+        publishRetained("homeassistant/binary_sensor/vent_" + objId + "/config", out);
+    };
+    auto pubNumber = [&](const String &objId, const String &name, const String &cmdTopic, const String &stateTopic, const String &valueTemplate, const String &unit, float min, float max, float step) {
+        DynamicJsonDocument doc(512);
+        doc["name"] = name;
+        doc["unique_id"] = "vent_" + objId;
+        doc["command_topic"] = cmdTopic;
+        doc["state_topic"] = stateTopic;
+        doc["value_template"] = valueTemplate;
+        if (unit.length()) doc["unit_of_measurement"] = unit;
+        doc["min"] = min;
+        doc["max"] = max;
+        doc["step"] = step;
+        doc["mode"] = "box";
+        String out; serializeJson(doc, out);
+        publishRetained("homeassistant/number/vent_" + objId + "/config", out);
+    };
     auto pubSensor = [&](const String &objId, const String &name, const String &stateTopic, const String &valueTemplate, const String &unit) {
         DynamicJsonDocument doc(512);
         doc["name"] = name;
@@ -343,6 +372,11 @@ void MqttManager::publishHaDiscovery() {
     String root = root_;
     pubSwitch("power", "Vent Power", root + "/set/power", root + "/state", "{{ value_json.power }}");
     pubSwitch("winter_mode", "Vent Winter Mode", root + "/set/winter_mode", root + "/state", "{{ value_json.winter_mode }}");
+    
+    // Binary sensors for faults
+    pubBinarySensor("fan_fault", "Fan Fault", root + "/fan/state", "{{ value_json.fault_latched }}", "problem");
+    pubBinarySensor("heater_fault", "Heater Fault", root + "/heater/state", "{{ value_json.fault_latched }}", "problem");
+    
     pubSensor("outdoor_temp", "Outdoor Temp", root + "/state", "{{ value_json.outdoor_temp }}", "°C");
     pubSensor("fan_pwm", "Fan PWM", root + "/fan/state", "{{ value_json.pwm }}", "%");
     pubSensor("fan_dp", "Fan Pressure", root + "/fan/state", "{{ value_json.dp }}", "Pa");
@@ -352,13 +386,31 @@ void MqttManager::publishHaDiscovery() {
     pubSensor("filter_alarm", "Filter Alarm", root + "/filter/state", "{{ value_json.alarm_active }}", "");
     pubSensor("heater_stage", "Heater Stage", root + "/heater/state", "{{ value_json.stage }}", "");
     pubSensor("heater_t_supply", "Supply Temp", root + "/heater/state", "{{ value_json.t_supply }}", "°C");
+    
+    // Text sensors for phase and block reasons
+    pubSensor("fan_phase", "Fan Phase", root + "/fan/state", "{% set p=value_json.phase|int %}{% if p==0 %}Off{% elif p==1 %}Starting{% elif p==2 %}Ramping{% elif p==3 %}Running{% elif p==4 %}Stopping{% elif p==5 %}Fault{% else %}Unknown{% endif %}", "");
+    pubSensor("heater_block_reason", "Heater Block Reason", root + "/heater/state", "{% set r=value_json.block_reason|int %}{% if r==0 %}None{% elif r==1 %}System Off{% elif r==2 %}Winter Mode Off{% elif r==3 %}Outdoor Too Warm{% elif r==4 %}Freecool Active{% elif r==5 %}No Duct Data{% elif r==6 %}Fan Not Ready{% elif r==7 %}Low Flow{% elif r==8 %}Flow Sensor Fault{% elif r==9 %}Pressure Out of Range{% else %}Unknown{% endif %}", "");
 
     for (uint8_t i = 0; i < ROOM_COUNT; i++) {
         String rt = root + "/room/" + String(i + 1) + "/state";
+        String roomSetRoot = root + "/room/" + String(i + 1) + "/set";
+        
         pubSensor("room" + String(i+1) + "_co2", "Room " + String(i+1) + " CO2", rt, "{{ value_json.co2 }}", "ppm");
         pubSensor("room" + String(i+1) + "_temp", "Room " + String(i+1) + " Temp", rt, "{{ value_json.temp }}", "°C");
         pubSensor("room" + String(i+1) + "_pos", "Room " + String(i+1) + " Damper", rt, "{{ value_json.pos }}", "%");
         pubSensor("room" + String(i+1) + "_co2_fresh", "Room " + String(i+1) + " CO2 Fresh", rt, "{{ value_json.co2_fresh }}", "");
         pubSensor("room" + String(i+1) + "_temp_fresh", "Room " + String(i+1) + " Temperature Fresh", rt, "{{ value_json.temp_fresh }}", "");
+        
+        // Switch for manual mode
+        pubSwitch("room" + String(i+1) + "_manual_mode", "Room " + String(i+1) + " Manual Mode", roomSetRoot + "/manual_mode", rt, "{{ value_json.manual_mode }}");
+        
+        // Switch for temp mode enable
+        pubSwitch("room" + String(i+1) + "_temp_mode", "Room " + String(i+1) + " Temp Mode", roomSetRoot + "/temp_mode", rt, "{{ value_json.temp_mode_enable }}");
+        
+        // Number for temp target
+        pubNumber("room" + String(i+1) + "_temp_target", "Room " + String(i+1) + " Temp Target", roomSetRoot + "/temp_target", rt, "{{ value_json.temp_target }}", "°C", 10.0, 35.0, 0.5);
+        
+        // Number for co2 target
+        pubNumber("room" + String(i+1) + "_co2_target", "Room " + String(i+1) + " CO2 Target", roomSetRoot + "/co2_target", rt, "{{ value_json.co2_target }}", "ppm", 400.0, 2000.0, 50.0);
     }
 }
