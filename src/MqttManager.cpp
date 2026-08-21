@@ -321,6 +321,24 @@ void MqttManager::publishState() {
 }
 
 void MqttManager::publishHaDiscovery() {
+    // Device information for grouping all entities into one device in HA
+    const char* deviceId = "vent_controller";
+    const char* deviceName = "Ventilation Controller";
+    const char* deviceSwVersion = FW_VERSION;
+    const char* deviceHwVersion = "1.0";
+    const char* deviceManufacturer = "Custom";
+    const char* deviceModel = "ESP32 Ventilation";
+    
+    auto makeDeviceJson = [&](DynamicJsonDocument& doc) {
+        JsonObject dev = doc.createNestedObject("device");
+        dev["identifiers"] = deviceId;
+        dev["name"] = deviceName;
+        dev["sw_version"] = deviceSwVersion;
+        dev["hw_version"] = deviceHwVersion;
+        dev["manufacturer"] = deviceManufacturer;
+        dev["model"] = deviceModel;
+    };
+    
     auto pubSwitch = [&](const String &objId, const String &name, const String &cmdTopic, const String &stateTopic, const String &valueTemplate) {
         DynamicJsonDocument doc(512);
         doc["name"] = name;
@@ -330,6 +348,7 @@ void MqttManager::publishHaDiscovery() {
         doc["value_template"] = valueTemplate;
         doc["payload_on"] = "1";
         doc["payload_off"] = "0";
+        makeDeviceJson(doc);
         String out; serializeJson(doc, out);
         publishRetained("homeassistant/switch/vent_" + objId + "/config", out);
     };
@@ -340,6 +359,7 @@ void MqttManager::publishHaDiscovery() {
         doc["state_topic"] = stateTopic;
         doc["value_template"] = valueTemplate;
         if (deviceClass.length()) doc["device_class"] = deviceClass;
+        makeDeviceJson(doc);
         String out; serializeJson(doc, out);
         publishRetained("homeassistant/binary_sensor/vent_" + objId + "/config", out);
     };
@@ -355,6 +375,7 @@ void MqttManager::publishHaDiscovery() {
         doc["max"] = max;
         doc["step"] = step;
         doc["mode"] = "box";
+        makeDeviceJson(doc);
         String out; serializeJson(doc, out);
         publishRetained("homeassistant/number/vent_" + objId + "/config", out);
     };
@@ -365,6 +386,7 @@ void MqttManager::publishHaDiscovery() {
         doc["state_topic"] = stateTopic;
         doc["value_template"] = valueTemplate;
         if (unit.length()) doc["unit_of_measurement"] = unit;
+        makeDeviceJson(doc);
         String out; serializeJson(doc, out);
         publishRetained("homeassistant/sensor/vent_" + objId + "/config", out);
     };
@@ -375,6 +397,7 @@ void MqttManager::publishHaDiscovery() {
         doc["command_topic"] = cmdTopic;
         doc["payload_press"] = "1";
         if (deviceClass.length()) doc["device_class"] = deviceClass;
+        makeDeviceJson(doc);
         String out; serializeJson(doc, out);
         publishRetained("homeassistant/button/vent_" + objId + "/config", out);
     };
