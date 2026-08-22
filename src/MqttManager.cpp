@@ -493,8 +493,8 @@ void MqttManager::publishHaDiscovery() {
     pubNumber("freecool_outdoor_min", "Freecool Outdoor Min", root + "/set/freecool_outdoor_min", root + "/state", "{{ value_json.freecool_outdoor_min }}", "°C", -20.0, 30.0, 1.0);
     
     // Buttons for fault reset and restart
-    pubButton("heater_fault_reset", "Heater Fault Reset", root + "/set/heater_fault_reset", "problem");
-    pubButton("fan_fault_reset", "Fan Fault Reset", root + "/set/fan_fault_reset", "problem");
+    pubButton("heater_fault_reset", "Heater Fault Reset", root + "/set/heater_fault_reset", "restart");
+    pubButton("fan_fault_reset", "Fan Fault Reset", root + "/set/fan_fault_reset", "restart");
     pubButton("restart", "Restart Device", root + "/set/restart", "restart");
 
     // Room entities with essential sensors and controls
