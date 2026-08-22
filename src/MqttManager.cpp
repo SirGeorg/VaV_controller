@@ -469,6 +469,7 @@ void MqttManager::publishHaDiscovery() {
     pubSensor("filter_alarm", "Filter Alarm", root + "/filter/state", "{{ value_json.alarm_active }}", "");
     pubBinarySensor("filter_sensor_ok", "Filter Sensor OK", root + "/filter/state", "{{ value_json.sensor_ok }}", "connectivity");
     pubBinarySensor("filter_alarm_active", "Filter Alarm Active", root + "/filter/state", "{{ value_json.alarm_active }}", "problem");
+    pubSensor("filter_pressure", "Filter Pressure", root + "/filter/state", "{{ value_json.pressure }}", "Pa");
     pubSensor("heater_stage", "Heater Stage", root + "/heater/state", "{{ value_json.stage }}", "");
     pubSensor("heater_t_supply", "Supply Temp", root + "/heater/state", "{{ value_json.t_supply }}", "°C");
     pubSensor("heater_block_reason", "Heater Block Reason", root + "/heater/state", "{% set r=value_json.block_reason|int %}{% if r==0 %}None{% elif r==1 %}System Off{% elif r==2 %}Winter Mode Off{% elif r==3 %}Outdoor Too Warm{% elif r==4 %}Freecool Active{% elif r==5 %}No Duct Data{% elif r==6 %}Fan Not Ready{% elif r==7 %}Low Flow{% elif r==8 %}Flow Sensor Fault{% elif r==9 %}Pressure Out of Range{% else %}Unknown{% endif %}", "");
