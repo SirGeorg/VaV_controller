@@ -129,6 +129,12 @@ void Fan::checkPressureAlarms(float dtSeconds) {
     } else {
         highTimerStartMs_ = 0;
     }
+
+    // --- критическое загрязнение фильтра: давление > 120% от порога фильтра ---
+    if (sensors.filterBlockedCritical()) {
+        triggerFault(FanFaultCode::FILTER_BLOCKED);
+        return;
+    }
 }
 
 void Fan::checkPressureSensor(unsigned long graceMs) {

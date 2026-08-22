@@ -43,6 +43,7 @@ public:
     float filterPressurePa();
     bool  filterSensorOk();
     bool  filterAlarmActive();
+    bool  filterBlockedCritical();  // true если давление > 120% от аварийного порога
     void  resetFilterAlarm();
     void  setFilterAlarmThreshold(float v);
     float getFilterAlarmThreshold();

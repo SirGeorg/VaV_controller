@@ -477,7 +477,7 @@ void MqttManager::publishHaDiscovery() {
     
     // Text sensors for phase and block reasons
     pubSensor("fan_phase", "Fan Phase", root + "/fan/state", "{% set p=value_json.phase|int %}{% if p==0 %}Off{% elif p==1 %}Starting{% elif p==2 %}Ramping{% elif p==3 %}Running{% elif p==4 %}Stopping{% elif p==5 %}Fault{% else %}Unknown{% endif %}", "");
-    pubSensor("fan_fault_code", "Fan Fault Code", root + "/fan/state", "{{ value_json.fault_code }}", "");
+    pubSensor("fan_fault_code", "Fan Fault Code", root + "/fan/state", "{% set c=value_json.fault_code|int %}{% if c==0 %}None{% elif c==1 %}Low Pressure{% elif c==2 %}High Pressure{% elif c==3 %}Sensor Loop{% elif c==4 %}Filter Blocked{% else %}Unknown{% endif %}", "");
     pubSensor("fan_fault_dp_at_trip", "Fan Fault DP At Trip", root + "/fan/state", "{{ value_json.fault_dp_at_trip }}", "Pa");
     
     // Number for heater target temp
