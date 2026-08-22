@@ -460,16 +460,11 @@ void MqttManager::publishHaDiscovery() {
     pubBinarySensor("flow_sensor_ok", "Flow Sensor OK", root + "/fan/state", "{{ value_json.flow_sensor_ok }}", "connectivity");
     
     pubSensor("outdoor_temp", "Outdoor Temp", root + "/state", "{{ value_json.outdoor_temp }}", "°C");
-    pubSensor("fw_version", "Firmware Version", root + "/state", "{{ value_json.fw_version }}", "");
-    pubSensor("build_date", "Build Date", root + "/state", "{{ value_json.build_date }}", "");
     pubSensor("uptime_s", "Uptime", root + "/state", "{{ value_json.uptime_s }}", "s");
     pubSensor("fan_pwm", "Fan PWM", root + "/fan/state", "{{ value_json.pwm }}", "%");
     pubSensor("fan_dp", "Fan Pressure", root + "/fan/state", "{{ value_json.dp }}", "Pa");
     pubSensor("fan_dp_setpoint", "Fan Pressure Setpoint", root + "/fan/state", "{{ value_json.dp_setpoint }}", "Pa");
-    pubSensor("fan_dp_min", "DP Min", root + "/fan/state", "{{ value_json.dp_min }}", "Pa");
-    pubSensor("fan_dp_max", "DP Max", root + "/fan/state", "{{ value_json.dp_max }}", "Pa");
     pubSensor("flow_pct", "Air Flow", root + "/fan/state", "{{ value_json.flow_pct }}", "%");
-    pubSensor("filter_pressure", "Filter Pressure", root + "/filter/state", "{{ value_json.pressure }}", "Pa");
     pubSensor("filter_alarm", "Filter Alarm", root + "/filter/state", "{{ value_json.alarm_active }}", "");
     pubBinarySensor("filter_sensor_ok", "Filter Sensor OK", root + "/filter/state", "{{ value_json.sensor_ok }}", "connectivity");
     pubBinarySensor("filter_alarm_active", "Filter Alarm Active", root + "/filter/state", "{{ value_json.alarm_active }}", "problem");
@@ -487,50 +482,22 @@ void MqttManager::publishHaDiscovery() {
     // Number for heater target temp
     pubNumber("heater_target_temp", "Heater Target Temp", root + "/set/heater_target_temp", root + "/heater/state", "{{ value_json.t_supply }}", "°C", 10.0, 60.0, 1.0);
     
-    // Numbers for fan DP settings
-    pubNumber("dp_min", "DP Min", root + "/set/dp_min", root + "/fan/state", "{{ value_json.dp_min }}", "Pa", 0.0, 500.0, 1.0);
-    pubNumber("dp_max", "DP Max", root + "/set/dp_max", root + "/fan/state", "{{ value_json.dp_max }}", "Pa", 0.0, 2000.0, 1.0);
-    pubNumber("dp_kp", "DP Kp", root + "/set/dp_kp", root + "/fan/state", "{{ value_json.dp_kp }}", "", 0.0, 10.0, 0.1);
-    pubNumber("dp_ki", "DP Ki", root + "/set/dp_ki", root + "/fan/state", "{{ value_json.dp_ki }}", "", 0.0, 10.0, 0.01);
-    pubNumber("dp_kd", "DP Kd", root + "/set/dp_kd", root + "/fan/state", "{{ value_json.dp_kd }}", "", 0.0, 10.0, 0.01);
-    pubNumber("min_fan_step", "Min Fan Step", root + "/set/min_fan_step", root + "/fan/state", "{{ value_json.min_fan_step }}", "%", 0.0, 100.0, 1.0);
-    pubNumber("min_fan_speed", "Min Fan Speed", root + "/set/min_fan_speed", root + "/fan/state", "{{ value_json.min_fan_speed }}", "%", 0.0, 100.0, 1.0);
-    pubNumber("min_dp_step", "Min DP Step", root + "/set/min_dp_step", root + "/fan/state", "{{ value_json.min_dp_step }}", "Pa", 0.0, 100.0, 1.0);
-    pubNumber("dp_within_setpoint_pct", "DP Within Setpoint %", root + "/set/dp_within_setpoint_pct", root + "/fan/state", "{{ value_json.dp_within_setpoint_pct }}", "%", 0.0, 100.0, 1.0);
-    pubNumber("dp_low_timeout", "DP Low Timeout", root + "/set/dp_low_timeout", root + "/fan/state", "{{ value_json.dp_low_timeout }}", "s", 0.0, 300.0, 1.0);
-    pubNumber("dp_high_timeout", "DP High Timeout", root + "/set/dp_high_timeout", root + "/fan/state", "{{ value_json.dp_high_timeout }}", "s", 0.0, 300.0, 1.0);
+    // Numbers for fan DP alarms only
     pubNumber("dp_alarm_low", "DP Alarm Low", root + "/set/dp_alarm_low", root + "/fan/state", "{{ value_json.dp_alarm_low }}", "Pa", 0.0, 500.0, 1.0);
     pubNumber("dp_alarm_high", "DP Alarm High", root + "/set/dp_alarm_high", root + "/fan/state", "{{ value_json.dp_alarm_high }}", "Pa", 0.0, 2000.0, 1.0);
-    pubNumber("flow_alarm_threshold", "Flow Alarm Threshold", root + "/set/flow_alarm_threshold", root + "/fan/state", "{{ value_json.flow_alarm_threshold }}", "%", 0.0, 100.0, 1.0);
     
     // Numbers for heater settings
-    pubNumber("heater_deadband_low", "Heater Deadband Low", root + "/set/heater_deadband_low", root + "/heater/state", "{{ value_json.heater_deadband_low }}", "°C", 0.0, 10.0, 0.5);
-    pubNumber("heater_deadband_high", "Heater Deadband High", root + "/set/heater_deadband_high", root + "/heater/state", "{{ value_json.heater_deadband_high }}", "°C", 0.0, 10.0, 0.5);
     pubNumber("heater_alarm_temp", "Heater Alarm Temp", root + "/set/heater_alarm_temp", root + "/heater/state", "{{ value_json.heater_alarm_temp }}", "°C", 40.0, 80.0, 1.0);
-    pubNumber("heater_outdoor_block_temp", "Heater Outdoor Block Temp", root + "/set/heater_outdoor_block_temp", root + "/state", "{{ value_json.outdoor_temp }}", "°C", -20.0, 30.0, 1.0);
-    pubNumber("heater_min_fan_runtime", "Heater Min Fan Runtime", root + "/set/heater_min_fan_runtime", root + "/heater/state", "{{ value_json.heater_min_fan_runtime }}", "s", 0.0, 300.0, 1.0);
     
-    // Numbers for filter settings
-    pubNumber("filter_alarm_threshold", "Filter Alarm Threshold", root + "/set/filter_alarm_threshold", root + "/filter/state", "{{ value_json.alarm_threshold }}", "Pa", 0.0, 500.0, 1.0);
-    
-    // Numbers for CO2 and general settings
-    pubNumber("co2_deadband", "CO2 Deadband", root + "/set/co2_deadband", root + "/state", "{{ value_json.co2_deadband }}", "ppm", 0.0, 500.0, 10.0);
-    pubNumber("co2_alarm_threshold", "CO2 Alarm Threshold", root + "/set/co2_alarm_threshold", root + "/state", "{{ value_json.co2_alarm_threshold }}", "ppm", 800.0, 5000.0, 50.0);
-    pubNumber("min_servo_step", "Min Servo Step", root + "/set/min_servo_step", root + "/state", "{{ value_json.min_servo_step }}", "%", 0.0, 100.0, 1.0);
-    pubNumber("room_data_timeout", "Room Data Timeout", root + "/set/room_data_timeout", root + "/state", "{{ value_json.room_data_timeout }}", "s", 0.0, 3600.0, 10.0);
-    pubNumber("temp_freecool_deadband", "Temp Freecool Deadband", root + "/set/temp_freecool_deadband", root + "/state", "{{ value_json.temp_freecool_deadband }}", "°C", 0.0, 10.0, 0.5);
+    // Numbers for freecool
     pubNumber("freecool_outdoor_min", "Freecool Outdoor Min", root + "/set/freecool_outdoor_min", root + "/state", "{{ value_json.freecool_outdoor_min }}", "°C", -20.0, 30.0, 1.0);
     
-    // Service mode controls
-    pubNumber("service_pwm", "Service PWM", root + "/set/fan_pwm", root + "/fan/state", "{{ value_json.service_pwm }}", "%", 0.0, 100.0, 1.0);
-    
-    // Buttons for fault reset and config
+    // Buttons for fault reset and restart
     pubButton("heater_fault_reset", "Heater Fault Reset", root + "/set/heater_fault_reset", "problem");
     pubButton("fan_fault_reset", "Fan Fault Reset", root + "/set/fan_fault_reset", "problem");
     pubButton("restart", "Restart Device", root + "/set/restart", "restart");
-    pubButton("config_backup", "Config Backup", root + "/config/backup_request", "");
 
-    // Room entities with additional sensors and direct damper control
+    // Room entities with essential sensors and controls
     for (uint8_t i = 0; i < ROOM_COUNT; i++) {
         String rt = root + "/room/" + String(i + 1) + "/state";
         String roomSetRoot = root + "/room/" + String(i + 1) + "/set";
@@ -538,9 +505,6 @@ void MqttManager::publishHaDiscovery() {
         pubSensor("room" + String(i+1) + "_co2", "Room " + String(i+1) + " CO2", rt, "{{ value_json.co2 }}", "ppm");
         pubSensor("room" + String(i+1) + "_temp", "Room " + String(i+1) + " Temp", rt, "{{ value_json.temp }}", "°C");
         pubSensor("room" + String(i+1) + "_pos", "Room " + String(i+1) + " Damper", rt, "{{ value_json.pos }}", "%");
-        pubSensor("room" + String(i+1) + "_max_pos", "Room " + String(i+1) + " Max Pos", rt, "{{ value_json.max_pos }}", "%");
-        pubSensor("room" + String(i+1) + "_co2_fresh", "Room " + String(i+1) + " CO2 Fresh", rt, "{{ value_json.co2_fresh }}", "");
-        pubSensor("room" + String(i+1) + "_temp_fresh", "Room " + String(i+1) + " Temperature Fresh", rt, "{{ value_json.temp_fresh }}", "");
         pubSensor("room" + String(i+1) + "_data_fresh", "Room " + String(i+1) + " Data Fresh", rt, "{{ value_json.data_fresh }}", "");
         pubSensor("room" + String(i+1) + "_block_reason", "Room " + String(i+1) + " Block Reason", rt, "{% set r=value_json.block_reason|int %}{% if r==0 %}None{% elif r==1 %}No Data{% elif r==2 %}Manual Mode{% elif r==3 %}Temp Mode Blocked{% else %}Unknown{% endif %}", "");
         
@@ -555,10 +519,6 @@ void MqttManager::publishHaDiscovery() {
         
         // Number for co2 target
         pubNumber("room" + String(i+1) + "_co2_target", "Room " + String(i+1) + " CO2 Target", roomSetRoot + "/co2_target", rt, "{{ value_json.co2_target }}", "ppm", 400.0, 2000.0, 50.0);
-        
-        // Numbers for min/max position
-        pubNumber("room" + String(i+1) + "_min_pos", "Room " + String(i+1) + " Min Pos", roomSetRoot + "/min_pos", rt, "{{ value_json.min_pos }}", "%", 0.0, 100.0, 1.0);
-        pubNumber("room" + String(i+1) + "_max_pos", "Room " + String(i+1) + " Max Pos Setting", roomSetRoot + "/max_pos", rt, "{{ value_json.max_pos }}", "%", 0.0, 100.0, 1.0);
         
         // Direct damper control in service mode (manual position)
         pubNumber("room" + String(i+1) + "_manual_pos", "Room " + String(i+1) + " Manual Damper Pos", roomSetRoot + "/manual_pos", rt, "{{ value_json.pos }}", "%", 0.0, 100.0, 1.0);
