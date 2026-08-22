@@ -349,6 +349,7 @@ void MqttManager::publishState() {
         doc["room_data_timeout"] = storage.getRoomDataTimeout();
         doc["temp_freecool_deadband"] = storage.getTempFreecoolDeadband();
         doc["freecool_outdoor_min"] = storage.getFreecoolOutdoorMin();
+        doc["heater_outdoor_block_temp"] = storage.getHeaterOutdoorBlockTemp();
         String out; serializeJson(doc, out);
         publishRetained(root_ + "/state", out);
     }
@@ -488,6 +489,7 @@ void MqttManager::publishHaDiscovery() {
     
     // Numbers for heater settings
     pubNumber("heater_alarm_temp", "Heater Alarm Temp", root + "/set/heater_alarm_temp", root + "/heater/state", "{{ value_json.heater_alarm_temp }}", "°C", 40.0, 80.0, 1.0);
+    pubNumber("heater_outdoor_block_temp", "Heater Outdoor Block Temp", root + "/set/heater_outdoor_block_temp", root + "/state", "{{ value_json.heater_outdoor_block_temp }}", "°C", 0.0, 30.0, 0.5);
     
     // Numbers for freecool
     pubNumber("freecool_outdoor_min", "Freecool Outdoor Min", root + "/set/freecool_outdoor_min", root + "/state", "{{ value_json.freecool_outdoor_min }}", "°C", -20.0, 30.0, 1.0);
