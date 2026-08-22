@@ -1,1 +1,31 @@
-Nothing needs to be added to .gitignore since only a source code file (.cpp) was modified and there are no build artifacts, dependencies, or temporary files in the changes.
+# PlatformIO
+.pio/
+.piolibdeps/
+.build/
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.d
+*.elf
+*.bin
+*.exe
+*.map
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Serial monitor logs
+*.log
+
+# Backup files
+*.bak
