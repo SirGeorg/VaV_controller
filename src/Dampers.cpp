@@ -39,7 +39,9 @@ void Dampers::setManualMode(uint8_t idx, bool enable) {
 void Dampers::setManualPos(uint8_t idx, float pos) {
     if (idx >= ROOM_COUNT) return;
     RoomSettings rs = storage.getRoom(idx);
-    state[idx].manualPos = constrain(pos, rs.min_pos, rs.max_pos);
+    // Линейное масштабирование: 0% -> min_pos, 100% -> max_pos
+    float scaledPos = rs.min_pos + (pos / 100.0f) * (rs.max_pos - rs.min_pos);
+    state[idx].manualPos = constrain(scaledPos, rs.min_pos, rs.max_pos);
 }
 
 void Dampers::serviceSetAngle(uint8_t idx, float angleDeg) {
