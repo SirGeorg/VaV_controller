@@ -53,13 +53,18 @@ void Fan::requestOn() {
 }
 
 void Fan::requestOff() {
-    if (phase_ == FanPhase::OFF || phase_ == FanPhase::STOPPING) return;
+    if (phase_ == FanPhase::OFF || phase_ == FanPhase::STOPPING_RAMP || phase_ == FanPhase::STOPPING_COAST) return;
     if (phase_ == FanPhase::FAULT) return;   // авария уже остановила всё мгновенно
-    phase_ = FanPhase::STOPPING;
+    
+    // Мгновенное отключение нагревателя при команде выключения
+    heater.allRelaysOffPublic();
+    
+    // Переход в фазу плавного снижения PWM
+    phase_ = FanPhase::STOPPING_RAMP;
     phaseStartMs_ = millis();
     lowTimerStartMs_ = 0;
     highTimerStartMs_ = 0;
-    eventLog.add("Fan: начат выбег перед остановкой");
+    eventLog.add("Fan: начато плавное снижение оборотов перед остановкой");
 }
 
 void Fan::triggerFault(FanFaultCode code) {
@@ -141,7 +146,8 @@ void Fan::checkPressureSensor(unsigned long graceMs) {
     // Отсутствие показаний датчика давления (обрыв 4-20мА/NaN) на рабочих фазах 1-4
     // — аварийный случай. Активируем только при активном управлении вентилятором.
     bool inControl = phase_ == FanPhase::STARTING || phase_ == FanPhase::RAMPING ||
-                     phase_ == FanPhase::RUNNING || phase_ == FanPhase::STOPPING;
+                     phase_ == FanPhase::RUNNING || phase_ == FanPhase::STOPPING_RAMP ||
+                     phase_ == FanPhase::STOPPING_COAST;
     if (!inControl) { pressureSensorGraceMs_ = 0; return; }
 
     if (!sensors.pressureSensorOk()) {
@@ -216,12 +222,32 @@ void Fan::update(float dtSeconds) {
             break;
         }
 
-        case FanPhase::STOPPING: {
-            // Во время выбега PWM не подаётся — вентилятор останавливается по инерции.
+        case FanPhase::STOPPING_RAMP: {
+            // Плавное снижение PWM от текущего значения до 0 за fan_stop_ramp_time_s
+            unsigned long elapsed = millis() - phaseStartMs_;
+            float rampTimeMs = Defaults::fan_stop_ramp_time_s * 1000UL;
+            float frac = (float)elapsed / rampTimeMs;
+            
+            if (frac >= 1.0f) {
+                // Завершение рампы, переход к выбегу
+                phase_ = FanPhase::STOPPING_COAST;
+                phaseStartMs_ = millis();
+                applyPwm(0);
+                eventLog.add("Fan: снижение оборотов завершено, начался выбег");
+            } else {
+                // Линейное снижение от текущего PWM до 0
+                float targetPwm = currentPwmPct_ * (1.0f - frac);
+                applyPwm(targetPwm);
+            }
+            break;
+        }
+
+        case FanPhase::STOPPING_COAST: {
+            // Выбег вентилятора по инерции при PWM=0
             applyPwm(0);
             if (millis() - phaseStartMs_ >= Defaults::fan_coastdown_time_s * 1000UL) {
                 phase_ = FanPhase::OFF;
-                eventLog.add("Fan: выбег завершён, остановлен");
+                eventLog.add("Fan: выбег завершён, вентилятор остановлен");
             }
             break;
         }

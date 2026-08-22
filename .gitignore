@@ -1,1 +1,39 @@
-Nothing needs to be added to .gitignore since only a source code file (.cpp) was modified and there are no build artifacts, dependencies, or temporary files in the changes.
+```
+# Build artifacts
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.a
+*.out
+
+# Dependencies
+venv/
+.venv/
+__pycache__/
+*.egg-info/
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# Editors
+.vscode/
+.idea/
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Coverage
+coverage/
+htmlcov/
+*.coverage
+
+# OS generated files
+.DS_Store
+Thumbs.db
+```

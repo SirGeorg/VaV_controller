@@ -98,10 +98,10 @@ void Dampers::update(float dtSeconds, bool systemOn, bool serviceMode) {
         return;
     }
 
-    // Если система выключена, но вентилятор ещё в режиме выбега (STOPPING),
+    // Если система выключена, но вентилятор ещё в режиме выбега (STOPPING_COAST),
     // заслонки остаются в текущем положении до полной остановки вентилятора.
     // Движение к min_pos начинается только после перехода вентилятора в OFF.
-    bool fanStopped = fan.isStoppingOrStopped() && !systemOn;
+    bool fanStopped = fan.isFullyStopped();
 
     for (uint8_t i = 0; i < ROOM_COUNT; i++) {
         RoomSettings rs = storage.getRoom(i);
