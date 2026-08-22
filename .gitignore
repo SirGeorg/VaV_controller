@@ -1,48 +1,46 @@
 ```
-# Compiled and build artifacts
-*.o
-*.obj
-*.a
-*.so
-*.dll
-*.exe
-*.out
+# PlatformIO build artifacts
+.pio/build/
+.pio/libdeps/
+.pio/envs/
+.pio/platforms/
+.pio/packages/
+
+# Build outputs
+build/
+dist/
+*.bin
+*.hex
+*.elf
+*.map
+*.lst
 
 # Dependencies
-node_modules/
-venv/
-.venv/
-__pycache__/
-.mypy_cache/
-.pytest_cache/
-target/
-.gradle/
+lib/
+.libs/
+dependencies/
 
-# Logs and temp files
-*.log
+# Temporary files
 *.tmp
+*.temp
+*.log
+
+# IDE files
+.vscode/
+.idea/
 *.swp
 *.swo
 
-# Environment
+# Environment files
 .env
 .env.local
 *.env.*
 
-# Editors
-.vscode/
-.idea/
-
-# System files
+# OS files
 .DS_Store
 Thumbs.db
 
-# Coverage
-coverage/
-htmlcov/
-.coverage
-
-# Compressed files
+# Compression files
 *.zip
 *.gz
 *.tar
@@ -61,4 +59,8 @@ htmlcov/
 *.Z
 *.lz
 *.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
 ```
