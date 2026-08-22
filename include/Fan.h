@@ -27,7 +27,7 @@ extern Dampers dampers;
 // ============================================================
 
 enum class FanPhase : uint8_t { OFF, STARTING, RAMPING, RUNNING, STOPPING, FAULT };
-enum class FanFaultCode : uint8_t { NONE = 0, LOW_PRESSURE = 1, HIGH_PRESSURE = 2, SENSOR_LOOP = 3 };
+enum class FanFaultCode : uint8_t { NONE = 0, LOW_PRESSURE = 1, HIGH_PRESSURE = 2, SENSOR_LOOP = 3, FILTER_BLOCKED = 4 };
 
 class Fan {
 public:

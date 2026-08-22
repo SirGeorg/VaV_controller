@@ -237,6 +237,13 @@ bool Sensors::filterAlarmActive() {
     return filterAlarmLatched;
 }
 
+bool Sensors::filterBlockedCritical() {
+    if (!filterSensorOk()) return false;
+    float pressure = filterPressurePa();
+    float criticalThreshold = filterAlarmThreshold * 1.2f; // 20% выше аварийного порога
+    return pressure > criticalThreshold;
+}
+
 void Sensors::resetFilterAlarm() {
     filterAlarmLatched = false;
     filterAlarmStartMs = 0;
