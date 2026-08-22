@@ -97,7 +97,8 @@ namespace Defaults {
     const float    min_dp_step           = 10.0f;
     const uint32_t damper_settle_time_s  = 15;
     const uint32_t fan_ramp_time_s       = 10;
-    const uint32_t fan_coastdown_time_s  = 180;
+    const uint32_t fan_stop_ramp_time_s  = 30;   // плавное снижение PWM при остановке
+    const uint32_t fan_coastdown_time_s  = 120;  // выбег после снижения PWM до 0
     const float    flow_alarm_threshold  = 30.0f;
     const float    dp_within_setpoint_pct= 20.0f;
 

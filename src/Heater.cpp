@@ -19,6 +19,10 @@ void Heater::allRelaysOff() {
     stage_ = 0;
 }
 
+void Heater::allRelaysOffPublic() {
+    allRelaysOff();
+}
+
 void Heater::setStage(uint8_t n) {
     if (n > HEATER_STAGES) n = HEATER_STAGES;
     for (uint8_t i = 0; i < HEATER_STAGES; i++) {
@@ -61,6 +65,18 @@ void Heater::update(float dtSeconds, bool systemOn) {
     if (fan.faultLatched()) {
         allRelaysOff();
         return;
+    }
+
+    // ---- Отключение нагревателя при остановке вентилятора (фазы STOPPING_RAMP/COAST) ----
+    // Нагреватель уже выключен в Fan::requestOff(), но на всякий случай дублируем проверку
+    if (!fan.isRunning() && phase_ > 0) {
+        // Вентилятор не работает (останавливается или остановлен) — держим реле выключенными
+        // Это также предотвращает включение, если система ещё не полностью перешла в OFF
+        allRelaysOff();
+        if (!systemOn) {
+            blockReason_ = HeaterBlockReason::SYSTEM_OFF;
+            return;
+        }
     }
 
     // ---- Список блокировок (автоснятие) ----

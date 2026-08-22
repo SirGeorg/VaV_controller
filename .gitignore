@@ -1,31 +1,39 @@
-# PlatformIO
-.pio/
-.piolibdeps/
-.build/
-
+```
 # Build artifacts
 *.o
-*.a
-*.so
-*.d
-*.elf
-*.bin
+*.obj
 *.exe
-*.map
+*.dll
+*.so
+*.a
+*.out
 
-# IDE files
-.idea/
-.vscode/
+# Dependencies
+venv/
+.venv/
+__pycache__/
+*.egg-info/
+
+# Logs and temp files
+*.log
+*.tmp
 *.swp
-*.swo
-*~
 
-# OS files
+# Editors
+.vscode/
+.idea/
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Coverage
+coverage/
+htmlcov/
+*.coverage
+
+# OS generated files
 .DS_Store
 Thumbs.db
-
-# Serial monitor logs
-*.log
-
-# Backup files
-*.bak
+```

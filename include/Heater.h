@@ -44,6 +44,9 @@ public:
     void triggerFault();
     void resetFault();
 
+    // Публичный метод для принудительного отключения всех реле (вызывается из Fan::requestOff)
+    void allRelaysOffPublic();
+
     uint8_t currentStage() const { return stage_; }
     HeaterBlockReason blockReason() const { return blockReason_; }
     bool faultLatched() const { return storage.getHeaterFaultLatched(); }
